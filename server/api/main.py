@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Depends, Security, Request
 from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
 
 # Import your modules
 from server.api.schemas import ChatRequest, ChatResponse, ChatMessage
@@ -7,6 +8,7 @@ from server.api.dependencies import get_llm_manager
 from server.core.llm_manager import LLMManager
 from server.api.middleware import RequestLoggingMiddleware, verify_api_key
 from server.api.errors import global_exception_handler
+from server.api.dependencies import get_llm_manager
 
 app = FastAPI(title="Project Luna AI Server", version="0.1.0")
 
@@ -22,11 +24,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: Connect to LLM
+    llm_manager = get_llm_manager()
+    await llm_manager.initialize()
+    yield
+    # Shutdown logic (if any) goes here
+
+app = FastAPI(
+    title="Project Luna AI Server",
+    version="0.1.0",
+    lifespan=lifespan # <--- Add this line!
+)
 # 3. Logging
 app.add_middleware(RequestLoggingMiddleware)
 
 # --- Routes ---
-
 @app.get("/health")
 async def health_check():
     return {"status": "ok", "mode": "personal"}
@@ -34,7 +48,7 @@ async def health_check():
 @app.post("/v1/chat", response_model=ChatResponse)
 async def chat(
     chat_req: ChatRequest,
-    api_key: str = Security(verify_api_key),  # 🔒 Protected
+    api_key: str = Security(verify_api_key),  # Protected
     llm: LLMManager = Depends(get_llm_manager)
 ):
     response_content = await llm.generate_response(

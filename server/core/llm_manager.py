@@ -1,15 +1,18 @@
 from typing import List, Dict, Any
+from .llm.ollama_adapter import OllamaAdapter
 
 class LLMManager:
     """
-    Core business logic for managing LLM interactions.
-    This will eventually hold the logic for Task 1.2 (Ollama/vLLM adapters).
+    Central Manager that handles LLM switching and configuration.
+    Currently hardcoded to OllamaAdapter for Phase 1.
     """
-    
     def __init__(self):
-        # Initialization logic (loading models, configs) will go here
-        pass
+        self.provider = OllamaAdapter()
+
+    async def initialize(self):
+        """Called on app startup to verify connection"""
+        await self.provider.initialize()
 
     async def generate_response(self, messages: List[Dict[str, Any]], settings: Dict[str, Any]) -> str:
-        # Placeholder logic for Phase 1 testing
-        return "Core Backend is online. LLM Adapter not yet connected."
+        # Pass request down to the active provider
+        return await self.provider.generate(messages, settings)

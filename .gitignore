@@ -25,3 +25,9 @@ build/
 # OS
 .DS_Store
 Thumbs.db
+
+# AI Models (Too big for Git)
+*.gguf
+*.bin
+server/models/*
+!server/models/.gitkeep
