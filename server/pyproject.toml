@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "ai-browser-server"
+version = "0.1.0"
+description = "Local AI Server"
+authors = ["You <you@example.com>"]
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.11"
+fastapi = "*"
+uvicorn = {extras = ["standard"], version = "*"}
+pydantic = "*"
+python-dotenv = "*"
+langchain = "*"
+langchain-community = "*"
+chromadb = "*"
+sentence-transformers = "*"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "*"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
