@@ -1,64 +1,31 @@
-from fastapi import FastAPI, Depends, Security, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from contextlib import asynccontextmanager
 
-# Import your modules
-from server.src.api.schemas import ChatRequest, ChatResponse, ChatMessage
-from server.src.api.dependencies import get_llm_manager
-from server.src.core.llm.manager import LLMManager
-from server.src.api.middleware import RequestLoggingMiddleware, verify_api_key
-from server.src.api.errors import global_exception_handler
-from server.src.api.dependencies import get_llm_manager
+# Import the Smart Router we just created
+from server.src.api.routers import chat
 
+# Initialize the Application
 app = FastAPI(title="Project Luna AI Server", version="0.1.0")
 
-# 1. Global Error Handling
-app.add_exception_handler(Exception, global_exception_handler)
-
-# 2. CORS (Crucial for Chrome Extension)
+# 1. Setup CORS (Essential for Chrome Extension)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # For dev, we can allow all. Lock down later if needed.
+    allow_origins=["*"],  # Allows the extension to connect from any page
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # Startup: Connect to LLM
-    llm_manager = get_llm_manager()
-    await llm_manager.initialize()
-    yield
-    # Shutdown logic (if any) goes here
+# 2. Register the Chat Router
+# This connects your "Smart Router" to the main application
+# The prefix means all chat requests go to: http://localhost:8000/api/v1/chat
+app.include_router(chat.router, prefix="/api/v1/chat", tags=["chat"])
 
-app = FastAPI(
-    title="Project Luna AI Server",
-    version="0.1.0",
-    lifespan=lifespan # <--- Add this line!
-)
-# 3. Logging
-app.add_middleware(RequestLoggingMiddleware)
+# 3. Health Check Endpoint
+@app.get("/")
+async def root():
+    return {"status": "online", "message": "Luna AI Server is Running"}
 
-# --- Routes ---
 @app.get("/health")
 async def health_check():
-    return {"status": "ok", "mode": "personal"}
-
-@app.post("/v1/chat", response_model=ChatResponse)
-async def chat(
-    chat_req: ChatRequest,
-    api_key: str = Security(verify_api_key),  # Protected
-    llm: LLMManager = Depends(get_llm_manager)
-):
-    response_content = await llm.generate_response(
-        messages=[m.model_dump() for m in chat_req.messages],
-        settings={"temperature": chat_req.temperature, "model": chat_req.model}
-    )
-    
-    return ChatResponse(
-        id="gen-123",
-        created=1234567890,
-        model=chat_req.model or "local",
-        message=ChatMessage(role="assistant", content=response_content)
-    )
+    return {"status": "ok", "mode": "gpu_accelerated"}

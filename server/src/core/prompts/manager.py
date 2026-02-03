@@ -1,10 +1,11 @@
 from typing import List, Dict, Any
 from .templates.system import CORE_SYSTEM_PROMPT
+# Import the limit from settings
+from server.src.config.settings import MAX_HISTORY_MESSAGES
 
 class PromptManager:
     """
-    Constructs the conversation history ensuring the System Prompt 
-    is always at the top.
+    Constructs the conversation history with a Sliding Window.
     """
     
     def __init__(self):
@@ -12,19 +13,28 @@ class PromptManager:
 
     def build_messages(self, chat_history: List[Dict[str, str]]) -> List[Dict[str, str]]:
         """
-        Takes the raw chat history and prepends the System Prompt.
+        Takes raw chat history, trims it to the limit, and prepends the System Prompt.
         """
-        messages = []
+        final_messages = []
         
-        # 1. Add the System Prompt first (The "Soul")
-        messages.append({
+        # 1. ALWAYS Add the System Prompt first (The "Soul")
+        final_messages.append({
             "role": "system", 
             "content": self.system_prompt
         })
         
-        # 2. Append the rest of the user's conversation
-        # (We will add context limits here in Phase 1.4)
-        for msg in chat_history:
-            messages.append(msg)
+        # 2. Apply the Sliding Window (The "Focus")
+        # Take only the last N messages
+        if len(chat_history) > MAX_HISTORY_MESSAGES:
+            # Slice the list: get the last MAX_HISTORY_MESSAGES items
+            recent_history = chat_history[-MAX_HISTORY_MESSAGES:]
             
-        return messages
+            # (Optional) Debug print to see it working in console
+            print(f"Trimming context: Keeping last {len(recent_history)}/{len(chat_history)} messages")
+        else:
+            recent_history = chat_history
+
+        # 3. Add the user's conversation
+        final_messages.extend(recent_history)
+            
+        return final_messages

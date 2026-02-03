@@ -36,3 +36,11 @@ def get_model_path(model_key: str = "default") -> str:
         raise FileNotFoundError(f"Model file not found: {model_path}")
         
     return str(model_path)
+
+# --- CONTEXT MANAGEMENT ---
+# The maximum number of past messages to send to the AI
+# 10 is a safe number for a 7B model (keeps context focused)
+MAX_HISTORY_MESSAGES = 10 
+
+# (Optional) Maximum tokens if we want to be precise later
+MAX_CONTEXT_TOKENS = 4096
