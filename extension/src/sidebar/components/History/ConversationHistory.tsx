@@ -12,13 +12,15 @@ interface Props {
   onNewChat: () => void;
 }
 
-// We renamed the component to match the filename
 export const ConversationHistory = ({ onSelectSession, onNewChat }: Props) => {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Fetch sessions from Python backend
+    loadSessions();
+  }, []);
+
+  const loadSessions = () => {
     fetch('http://localhost:8000/api/v1/chat/sessions')
       .then(res => res.json())
       .then(data => {
@@ -29,7 +31,25 @@ export const ConversationHistory = ({ onSelectSession, onNewChat }: Props) => {
         console.error("Failed to load history:", err);
         setLoading(false);
       });
-  }, []);
+  };
+
+  const handleClearMemory = async () => {
+    if (!confirm("⚠️ Are you sure? This will delete ALL chat history permanently.")) {
+      return;
+    }
+
+    try {
+      await fetch('http://localhost:8000/api/v1/chat/sessions', {
+        method: 'DELETE'
+      });
+      // Clear the list locally
+      setSessions([]);
+      // Start a fresh chat
+      onNewChat();
+    } catch (e) {
+      alert("Failed to wipe memory. Is the server running?");
+    }
+  };
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: '#F9F9F9' }}>
@@ -81,6 +101,27 @@ export const ConversationHistory = ({ onSelectSession, onNewChat }: Props) => {
           ))
         )}
       </div>
+
+      {/* Footer: Clear Button */}
+      {sessions.length > 0 && (
+        <div style={{ padding: '16px', borderTop: '1px solid #E5E5EA', backgroundColor: 'white' }}>
+          <button
+            onClick={handleClearMemory}
+            style={{
+              width: '100%',
+              padding: '10px',
+              backgroundColor: '#FF3B30', // Danger Red
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              fontWeight: 600,
+              cursor: 'pointer'
+            }}
+          >
+            🗑️ Clear Memory
+          </button>
+        </div>
+      )}
     </div>
   );
 };
