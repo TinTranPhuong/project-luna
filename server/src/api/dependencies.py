@@ -1,6 +1,6 @@
 from functools import lru_cache
 from fastapi import Depends
-from server.core.llm_manager import LLMManager
+from server.src.core.llm.manager import LLMManager
 
 # Use lru_cache to ensure we create only one instance of the LLM Manager (Singleton pattern)
 @lru_cache()

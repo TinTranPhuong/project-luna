@@ -19,11 +19,11 @@ class OllamaAdapter(BaseLLMAdapter):
                 # 'tags' endpoint lists available models
                 async with session.get(f"{self.base_url}/api/tags") as resp:
                     if resp.status == 200:
-                        logger.info(f"✅ Connected to Ollama at {self.base_url}")
+                        logger.info(f"Connected to Ollama at {self.base_url}")
                     else:
-                        logger.warning(f"⚠️ Ollama reachable but returned status {resp.status}")
+                        logger.warning(f"Ollama reachable but returned status {resp.status}")
             except Exception as e:
-                logger.error(f"❌ Could not connect to Ollama: {e}")
+                logger.error(f"Could not connect to Ollama: {e}")
                 logger.error("Make sure Ollama is running! (Run 'ollama serve')")
 
     async def generate(self, messages: List[Dict[str, str]], settings: Dict[str, Any]) -> str:

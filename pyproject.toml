@@ -19,6 +19,7 @@ aiohttp = "^3.13.3"
 sqlalchemy = "^2.0.46"
 aiosqlite = "^0.22.1"
 greenlet = "^3.3.1"
+alembic = "^1.18.3"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "*"

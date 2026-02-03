@@ -31,3 +31,6 @@ Thumbs.db
 *.bin
 server/models/*
 !server/models/.gitkeep
+
+# DB
+*luna.db

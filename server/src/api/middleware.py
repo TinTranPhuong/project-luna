@@ -24,7 +24,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         start_time = time.time()
         
         # Log Request
-        logger.info(f"➡️  {request.method} {request.url.path}")
+        logger.info(f"{request.method} {request.url.path}")
         
         try:
             response = await call_next(request)
@@ -32,11 +32,11 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
             
             # Log Response
             logger.info(
-                f"⬅️  {response.status_code} | {process_time:.2f}ms | {request.url.path}"
+                f"{response.status_code} | {process_time:.2f}ms | {request.url.path}"
             )
             return response
         except Exception as e:
-            logger.error(f"❌ Request failed: {str(e)}")
+            logger.error(f"Request failed: {str(e)}")
             raise e
 
 # --- Task 1.1.4: Simple Authentication ---

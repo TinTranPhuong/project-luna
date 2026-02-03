@@ -3,12 +3,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 # Import your modules
-from server.api.schemas import ChatRequest, ChatResponse, ChatMessage
-from server.api.dependencies import get_llm_manager
-from server.core.llm_manager import LLMManager
-from server.api.middleware import RequestLoggingMiddleware, verify_api_key
-from server.api.errors import global_exception_handler
-from server.api.dependencies import get_llm_manager
+from server.src.api.schemas import ChatRequest, ChatResponse, ChatMessage
+from server.src.api.dependencies import get_llm_manager
+from server.src.core.llm.manager import LLMManager
+from server.src.api.middleware import RequestLoggingMiddleware, verify_api_key
+from server.src.api.errors import global_exception_handler
+from server.src.api.dependencies import get_llm_manager
 
 app = FastAPI(title="Project Luna AI Server", version="0.1.0")
 
