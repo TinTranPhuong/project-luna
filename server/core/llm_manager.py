@@ -1,18 +1,15 @@
 from typing import List, Dict, Any
-from .llm.ollama_adapter import OllamaAdapter
+from .llm.llama_cpp_adapter import LlamaCppAdapter
 
 class LLMManager:
-    """
-    Central Manager that handles LLM switching and configuration.
-    Currently hardcoded to OllamaAdapter for Phase 1.
-    """
     def __init__(self):
-        self.provider = OllamaAdapter()
+        # Ensure this filename MATCHES exactly what is in your server/models folder
+        # I recommend downloading a standard text model if the VL one crashes
+        self.model_file = "Qwen2.5-VL-7B-Instruct-Q4_K_M.gguf"
+        self.provider = LlamaCppAdapter(model_filename=self.model_file)
 
     async def initialize(self):
-        """Called on app startup to verify connection"""
         await self.provider.initialize()
 
     async def generate_response(self, messages: List[Dict[str, Any]], settings: Dict[str, Any]) -> str:
-        # Pass request down to the active provider
         return await self.provider.generate(messages, settings)
