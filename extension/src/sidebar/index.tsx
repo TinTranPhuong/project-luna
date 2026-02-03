@@ -3,39 +3,82 @@ import { useState, useEffect, useRef } from 'react';
 import { MessageItem, Message } from './components/Chat/MessageItem';
 import { InputBox } from './components/Chat/InputBox';
 
+// FIX: Import from the existing file structure
+import { ConversationHistory } from './components/History/ConversationHistory';
+
 const Sidebar = () => {
-  const [messages, setMessages] = useState<Message[]>([
-    { id: '1', role: 'assistant', content: 'Hello! I am Luna. How can I help you?' }
-  ]);
+  // View State: 'chat' or 'history'
+  const [view, setView] = useState<'chat' | 'history'>('chat');
+  
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [currentSessionId, setCurrentSessionId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to bottom
+  // Auto-scroll
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
+  useEffect(() => { scrollToBottom(); }, [messages, view]);
 
+  // Load initial state (New Chat)
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    if (!currentSessionId && messages.length === 0) {
+      setMessages([{ id: 'init', role: 'assistant', content: 'Hello! I am Luna. How can I help you?' }]);
+    }
+  }, []);
+
+  // --- Actions ---
+
+  const handleLoadSession = async (sessionId: number) => {
+    setLoading(true);
+    setCurrentSessionId(sessionId);
+    setView('chat'); // Switch back to chat view
+    
+    try {
+      const res = await fetch(`http://localhost:8000/api/v1/chat/history/${sessionId}`);
+      const history = await res.json();
+      
+      // Map DB format to UI format
+      const uiMessages: Message[] = history.map((msg: any) => ({
+        id: msg.id.toString(),
+        role: msg.role,
+        content: msg.content
+      }));
+      setMessages(uiMessages);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleNewChat = () => {
+    setCurrentSessionId(null);
+    setMessages([{ id: Date.now().toString(), role: 'assistant', content: 'Hello! I am Luna. How can I help you?' }]);
+    setView('chat');
+  };
 
   const handleSend = async (text: string) => {
-    // 1. Add User Message immediately
     const userMsg: Message = { id: Date.now().toString(), role: 'user', content: text };
     setMessages(prev => [...prev, userMsg]);
     setLoading(true);
 
     try {
-      // 2. Call the Local Python Server
+      const payload: any = { message: text };
+      if (currentSessionId) payload.session_id = currentSessionId;
+
       const response = await fetch('http://localhost:8000/api/v1/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text }) // We handle session_id later
+        body: JSON.stringify(payload)
       });
 
       const data = await response.json();
+      
+      // If this was a new chat, the server just created an ID. Save it!
+      if (!currentSessionId) setCurrentSessionId(data.session_id);
 
-      // 3. Add AI Response
       const aiMsg: Message = { 
         id: (Date.now() + 1).toString(), 
         role: 'assistant', 
@@ -45,39 +88,42 @@ const Sidebar = () => {
 
     } catch (error) {
       console.error(error);
-      const errorMsg: Message = { 
-        id: Date.now().toString(), 
-        role: 'assistant', 
-        content: "Error: I couldn't reach the local server. Is it running?" 
-      };
-      setMessages(prev => [...prev, errorMsg]);
+      setMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', content: "⚠️ Error: Server offline." }]);
     } finally {
       setLoading(false);
     }
   };
 
+  // --- Render ---
+
+  if (view === 'history') {
+    return <ConversationHistory onSelectSession={handleLoadSession} onNewChat={handleNewChat} />;
+  }
+
   return (
-    <div style={{ 
-      display: 'flex', 
-      flexDirection: 'column', 
-      height: '100vh', 
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' 
-    }}>
-      {/* Header */}
-      <div style={{ padding: '16px', borderBottom: '1px solid #E5E5EA', fontWeight: 'bold' }}>
-        Luna AI
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
+      
+      {/* Header with History Button */}
+      <div style={{ padding: '12px 16px', borderBottom: '1px solid #E5E5EA', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F9F9F9' }}>
+        <span style={{ fontWeight: 'bold' }}>🌙 Luna AI</span>
+        <button 
+          onClick={() => setView('history')}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px' }}
+          title="View History"
+        >
+          🕒
+        </button>
       </div>
 
-      {/* Message List (Scrollable) */}
+      {/* Message List */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
         {messages.map(msg => (
           <MessageItem key={msg.id} message={msg} />
         ))}
-        {loading && <div style={{ color: '#8E8E93', fontSize: '12px', marginLeft: '10px' }}>Luna is thinking...</div>}
+        {loading && <div style={{ color: '#8E8E93', fontSize: '12px', marginLeft: '10px' }}>Thinking...</div>}
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Area */}
       <InputBox onSend={handleSend} disabled={loading} />
     </div>
   );
