@@ -12,7 +12,7 @@ MODEL_DIR = SRC_ROOT / "models"
 # You can map different "Intents" to specific GGUF files here.
 MODEL_REGISTRY = {
     # The default general-purpose brain
-    "default": "Qwen2.5-VL-7B-Instruct-Q4_K_M.gguf",
+    "default": "DeepSeek-R1-Distill-Qwen-14B-Q4_K_M.gguf",
     
     # Future: A smaller, faster model for simple tasks
     "fast": "Qwen2.5-0.5B-Instruct-Q4_K_M.gguf",

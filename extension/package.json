@@ -28,9 +28,14 @@
     "webpack-cli": "^6.0.1"
   },
   "dependencies": {
+    "@mozilla/readability": "^0.6.0",
+    "@types/dompurify": "^3.0.5",
+    "@types/turndown": "^5.0.6",
+    "dompurify": "^3.3.1",
     "lucide-react": "^0.563.0",
     "react-markdown": "^10.1.0",
-    "remark-gfm": "^4.0.1"
+    "remark-gfm": "^4.0.1",
+    "turndown": "^7.2.2"
   },
   "directories": {
     "test": "tests"

@@ -1,19 +1,23 @@
-//import { createRoot } from 'react-dom/client';
 import { useState, KeyboardEvent } from 'react';
 
 interface Props {
-  onSend: (text: string) => void;
+  onSend: (text: string, context?: string) => void; // Updated signature
   disabled?: boolean;
 }
 
 export const InputBox = ({ onSend, disabled }: Props) => {
   const [text, setText] = useState('');
-  const [contextAdded, setContextAdded] = useState(false);
+  const [attachedContext, setAttachedContext] = useState<string | null>(null);
+  const [isReading, setIsReading] = useState(false);
 
   const handleSend = () => {
     if (text.trim() && !disabled) {
-      onSend(text);
+      // Send text AND the attached context (if any)
+      onSend(text, attachedContext || undefined);
+      
+      // Clear inputs
       setText('');
+      setAttachedContext(null);
     }
   };
 
@@ -24,65 +28,88 @@ export const InputBox = ({ onSend, disabled }: Props) => {
     }
   };
 
-  const handleAddContext = async () => {
+  const handleAttachContext = async () => {
+    setIsReading(true);
     try {
-      // 1. Get the active tab
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       if (!tab.id) return;
 
-      // 2. Ask the Content Script for text
-      // We use chrome.tabs.sendMessage to talk to the page
       chrome.tabs.sendMessage(tab.id, { action: "GET_PAGE_CONTENT" }, (response) => {
+        setIsReading(false);
         if (chrome.runtime.lastError) {
-          console.error(chrome.runtime.lastError);
-          alert("Could not read page. Try refreshing the page first.");
+          alert("Refresh the page first!");
           return;
         }
-
         if (response && response.content) {
-          // Prepend the context to the message buffer (hidden from user mainly, or visible)
-          // For now, let's just show it in the input to prove it works
-          const contextPrompt = `\n\n[Context from Website]:\n${response.content.slice(0, 500)}...\n\n`;
-          setText(prev => contextPrompt + prev);
-          setContextAdded(true);
+          setAttachedContext(response.content);
         }
       });
     } catch (e) {
       console.error(e);
+      setIsReading(false);
     }
   };
 
   return (
     <div style={{ padding: '16px', borderTop: '1px solid #E5E5EA', backgroundColor: '#FFFFFF' }}>
+      
+      {/* IDEA 1: The Attachment Badge */}
+      {attachedContext && (
+        <div style={{ 
+          marginBottom: '8px', 
+          display: 'flex', 
+          alignItems: 'center', 
+          fontSize: '12px', 
+          backgroundColor: '#E8F5E9', 
+          color: '#2E7D32',
+          padding: '6px 10px',
+          borderRadius: '6px',
+          border: '1px solid #C8E6C9'
+        }}>
+          <span>📄 Current Page Attached ({attachedContext.length} chars)</span>
+          <button 
+            onClick={() => setAttachedContext(null)}
+            style={{ 
+              marginLeft: 'auto', 
+              background: 'none', 
+              border: 'none', 
+              cursor: 'pointer', 
+              color: '#1B5E20' 
+            }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       <div style={{ display: 'flex', gap: '8px' }}>
-        {/* NEW: Context Button */}
         <button
-          onClick={handleAddContext}
-          disabled={disabled}
-          title="Read current page"
+          onClick={handleAttachContext}
+          disabled={disabled || isReading}
+          title={attachedContext ? "Page already attached" : "Read current page"}
           style={{
             padding: '10px',
             borderRadius: '50%',
-            backgroundColor: contextAdded ? '#34C759' : '#F2F2F7', // Green if added
-            border: 'none',
-            cursor: 'pointer',
-            fontSize: '16px'
+            backgroundColor: attachedContext ? '#34C759' : (isReading ? '#FFF' : '#F2F2F7'),
+            border: isReading ? '2px solid #007AFF' : 'none',
+            cursor: disabled ? 'not-allowed' : 'pointer',
+            fontSize: '16px',
+            transition: 'all 0.2s'
           }}
         >
-          {contextAdded ? '👁️' : '📄'} 
+          {isReading ? '⏳' : (attachedContext ? '✅' : '👁️')}
         </button>
 
         <input
-          // ... keep existing input props ...
           type="text"
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Ask Luna..."
+          placeholder="Ask about this page..."
           disabled={disabled}
           style={{ flex: 1, padding: '10px', borderRadius: '20px', border: '1px solid #C7C7CC', outline: 'none', fontSize: '14px' }}
         />
-        {/* ... keep send button ... */}
+        
         <button
           onClick={handleSend}
           disabled={disabled || !text.trim()}

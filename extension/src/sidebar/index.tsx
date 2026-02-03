@@ -59,13 +59,34 @@ const Sidebar = () => {
     setView('chat');
   };
 
-  const handleSend = async (text: string) => {
-    const userMsg: Message = { id: Date.now().toString(), role: 'user', content: text };
+  const handleSend = async (text: string, context?: string) => {
+    // 1. Prepare the content
+    let displayContent = text;
+    let payloadMessage = text;
+
+    if (context) {
+      // Create the hidden block
+      const contextBlock = `Context:\n<details><summary>📄 View Attached Page Content</summary>\n\n${context}\n\n</details>`;
+      
+      // Update what YOU see (Context + Question)
+      displayContent = `${contextBlock}\n\n${text}`;
+      
+      // Update what the AI sees
+      payloadMessage = `${contextBlock}\n\nQuestion: ${text}`;
+    }
+
+    // 2. Add to UI immediately
+    const userMsg: Message = { 
+      id: Date.now().toString(), 
+      role: 'user', 
+      content: displayContent // <--- CHANGE: Show the full content (collapsed)
+    };
+    
     setMessages(prev => [...prev, userMsg]);
     setLoading(true);
 
     try {
-      const payload: any = { message: text };
+      const payload: any = { message: payloadMessage }; // <--- CHANGE: Use the formatted payload
       if (currentSessionId) payload.session_id = currentSessionId;
 
       const response = await fetch('http://localhost:8000/api/v1/chat', {
@@ -76,7 +97,6 @@ const Sidebar = () => {
 
       const data = await response.json();
       
-      // If this was a new chat, the server just created an ID. Save it!
       if (!currentSessionId) setCurrentSessionId(data.session_id);
 
       const aiMsg: Message = { 
@@ -111,7 +131,7 @@ const Sidebar = () => {
           style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px' }}
           title="View History"
         >
-          🕒
+          History
         </button>
       </div>
 
