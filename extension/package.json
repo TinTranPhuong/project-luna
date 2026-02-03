@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-  "build": "webpack --config webpack.config.js",
-  "watch": "webpack --watch --config webpack.config.js"
+    "build": "webpack --config webpack.config.js",
+    "watch": "webpack --watch --config webpack.config.js"
   },
   "keywords": [],
   "author": "",
@@ -28,7 +28,9 @@
     "webpack-cli": "^6.0.1"
   },
   "dependencies": {
-    "lucide-react": "^0.563.0"
+    "lucide-react": "^0.563.0",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1"
   },
   "directories": {
     "test": "tests"
