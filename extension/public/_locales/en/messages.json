@@ -1,0 +1,10 @@
+{
+  "extensionName": {
+    "message": "Luna - AI Browser Assistant",
+    "description": "Name of the extension"
+  },
+  "extensionDescription": {
+    "message": "Your local AI companion powered by Project Luna.",
+    "description": "Description of the extension"
+  }
+}
