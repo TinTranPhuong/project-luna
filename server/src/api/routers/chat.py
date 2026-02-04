@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
 from typing import List, Optional
@@ -100,15 +101,15 @@ async def chat_endpoint(request: ChatRequest, db: AsyncSession = Depends(get_db)
     history_records = history_result.scalars().all()
     chat_history = [{"role": msg.role, "content": msg.content} for msg in history_records]
 
-    # 4. Generate AI Response
-    ai_text = await llm_manager.generate_response(chat_history)
+    # 4. Stream the Response
+    async def iter_response():
+        # FIX: Call the manager's stream_chat method
+        # This fixes the "AttributeError: 'LLMManager' object has no attribute 'llm'"
+        async for chunk in llm_manager.stream_chat(chat_history):
+             yield chunk
 
     # 5. Save AI Response
-    ai_msg = ChatMessage(session_id=session.id, role="assistant", content=ai_text)
-    db.add(ai_msg)
-    await db.commit()
-
-    return ChatResponse(response=ai_text, session_id=session.id)
+    return StreamingResponse(iter_response(), media_type="text/plain")
 
 @router.delete("/sessions")
 async def clear_all_sessions(db: AsyncSession = Depends(get_db)):

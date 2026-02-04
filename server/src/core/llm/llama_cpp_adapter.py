@@ -1,5 +1,5 @@
 from llama_cpp import Llama
-from typing import List, Dict, Any
+from typing import List, Dict, Any, AsyncGenerator
 import os
 
 class LlamaCppAdapter:
@@ -18,11 +18,11 @@ class LlamaCppAdapter:
         # RTX 5060 Ti Configuration
         self.llm = Llama(
             model_path=self.model_path,
-            n_ctx=self.n_ctx,    # Context Window
-            n_gpu_layers=-1,     # -1 = All layers to GPU
+            n_ctx=self.n_ctx,    
+            n_gpu_layers=-1,     
             verbose=False,       # Clean logs
         )
-        print("✅ GPU Model Loaded Successfully.")
+        print("GPU Model Loaded Successfully.")
 
     async def generate(self, messages: List[Dict[str, Any]], settings: Dict[str, Any]) -> str:
         if not self.llm:
@@ -38,3 +38,17 @@ class LlamaCppAdapter:
         )
         
         return response["choices"][0]["message"]["content"]
+    
+    async def stream(self, messages: List[Dict[str, Any]], settings: Dict[str, Any]) -> AsyncGenerator[str, None]:
+        if not self.llm: await self.initialize()
+        
+        stream = self.llm.create_chat_completion(
+            messages=messages,
+            stream=True # Enable Streaming here
+        )
+        
+        for chunk in stream:
+            if "choices" in chunk and len(chunk["choices"]) > 0:
+                delta = chunk["choices"][0].get("delta", {})
+                if "content" in delta:
+                    yield delta["content"]

@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from server.src.api.routers import chat
 
 # Initialize the Application
-app = FastAPI(title="Project Luna AI Server", version="0.1.0")
+app = FastAPI(title="Luna Server", version="1.1")
 
 # 1. Setup CORS (Essential for Chrome Extension)
 app.add_middleware(
@@ -24,7 +24,7 @@ app.include_router(chat.router, prefix="/api/v1/chat", tags=["chat"])
 # 3. Health Check Endpoint
 @app.get("/")
 async def root():
-    return {"status": "online", "message": "Luna AI Server is Running"}
+    return {"status": "online", "message": "Luna Server is Running"}
 
 @app.get("/health")
 async def health_check():

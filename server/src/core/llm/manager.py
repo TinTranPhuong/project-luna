@@ -39,3 +39,25 @@ class LLMManager:
         
         # Call the provider with the updated settings
         return await self.provider.generate(formatted_messages, settings)
+    
+    # ... inside class LLMManager ...
+
+    async def stream_chat(self, messages: List[Dict[str, Any]], settings: Dict[str, Any] = None):
+        """
+        Stream the response token by token using the adapter.
+        """
+        if settings is None:
+            settings = {}
+            
+        # Ensure we have limits set
+        if "max_tokens" not in settings:
+            settings["max_tokens"] = 8192
+        if "temperature" not in settings:
+            settings["temperature"] = 0.5
+
+        # Format messages using your prompt manager
+        formatted_messages = self.prompt_manager.build_messages(messages)
+        
+        # Use the PROVIDER (Adapter), not 'self.llm'
+        async for chunk in self.provider.stream(formatted_messages, settings):
+            yield chunk
