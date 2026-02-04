@@ -1,4 +1,7 @@
 import { useState, KeyboardEvent } from 'react';
+// Import your assets (Ensure these match your filenames exactly)
+import iconScan from '../../../assets/icon_scan.png';
+import iconSend from '../../../assets/icon_send.png';
 
 interface Props {
   onSend: (text: string, context?: string) => void;
@@ -10,7 +13,6 @@ export const InputBox = ({ onSend, disabled }: Props) => {
   const [attachedContext, setAttachedContext] = useState<string | null>(null);
   const [isReading, setIsReading] = useState(false);
 
-  // ... (Handlers same as before) ...
   const handleSend = () => {
     if (text.trim() && !disabled) {
       onSend(text, attachedContext || undefined);
@@ -18,85 +20,88 @@ export const InputBox = ({ onSend, disabled }: Props) => {
       setAttachedContext(null);
     }
   };
+
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
     }
   };
+
   const handleAttachContext = async () => {
     setIsReading(true);
     try {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       if (!tab.id) return;
+
       chrome.tabs.sendMessage(tab.id, { action: "GET_PAGE_CONTENT" }, (response) => {
         setIsReading(false);
         if (chrome.runtime.lastError) {
-          alert("Please refresh the web page.");
+          alert("Refresh the page first!");
           return;
         }
-        if (response && response.content) setAttachedContext(response.content);
+        if (response && response.content) {
+          setAttachedContext(response.content);
+        }
       });
     } catch (e) {
       console.error(e);
       setIsReading(false);
     }
   };
-  // ...
 
   return (
     <div className="input-container">
       
+      {/* Attachment Indicator (Remains text for clarity) */}
       {attachedContext && (
-        <div style={{ 
-          marginBottom: '8px', display: 'flex', alignItems: 'center', fontSize: '12px', 
-          backgroundColor: '#E8F5E9', color: '#2E7D32', padding: '6px 10px', 
-          borderRadius: '6px', border: '1px solid #C8E6C9' 
-        }}>
-          <span>Page Attached ({attachedContext.length} chars)</span>
-          <button 
-            onClick={() => setAttachedContext(null)}
-            style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: '#1B5E20', fontWeight: 'bold' }}
-          >
-            Remove
-          </button>
+        <div className="attachment-badge">
+          <span>Page Attached</span>
+          <button onClick={() => setAttachedContext(null)}>✕</button>
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: '8px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        
+        {/* SCAN BUTTON (Icon) */}
         <button
           onClick={handleAttachContext}
           disabled={disabled || isReading}
-          title={attachedContext ? "Page is attached" : "Read current page"}
-          style={{
-            padding: '0 12px', borderRadius: '20px',
-            backgroundColor: attachedContext ? '#34C759' : 'var(--bg-secondary)', // Use variable
-            color: attachedContext ? 'white' : 'var(--text-main)', // Use variable
-            border: '1px solid var(--border-color)', // Add border for dark mode visibility
-            cursor: disabled ? 'not-allowed' : 'pointer',
-            fontSize: '12px', fontWeight: 600, whiteSpace: 'nowrap'
-          }}
+          title="Scan this page"
+          className="icon-btn"
+          style={{ opacity: attachedContext ? 1 : 0.6 }} // Dim if not attached
         >
-          {isReading ? 'Reading...' : (attachedContext ? 'Attached' : 'Read Page')}
+          <img 
+            src={iconScan} 
+            alt="Scan" 
+            style={{ 
+              width: '24px', 
+              height: '24px',
+              // Add a subtle spin animation if reading
+              animation: isReading ? 'spin 1s linear infinite' : 'none'
+            }} 
+          />
         </button>
 
+        {/* INPUT FIELD */}
         <input
           type="text"
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Type a message..."
+          placeholder="Ask Luna..."
           disabled={disabled}
           className="chat-input" 
         />
         
+        {/* SEND BUTTON (Icon) */}
         <button
           onClick={handleSend}
           disabled={disabled || !text.trim()}
-          className="btn-primary" // Reuse class
-          style={{ borderRadius: '20px', padding: '8px 16px', opacity: disabled ? 0.5 : 1 }}
+          className="icon-btn send-btn"
+          title="Send"
         >
-          Send
+          <img src={iconSend} alt="Send" style={{ width: '24px', height: '24px' }} />
         </button>
       </div>
     </div>

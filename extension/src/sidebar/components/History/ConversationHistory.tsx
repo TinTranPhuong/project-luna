@@ -16,22 +16,25 @@ export const ConversationHistory = ({ onSelectSession, onNewChat }: Props) => {
   };
 
   return (
-    // REMOVED: style={{ backgroundColor: '#F9F9F9' }}
-    // The class 'app-container' now handles the background color automatically
     <div className="app-container">
       
-      {/* Header */}
-      <div className="header">
-        <span>Recent Chats</span>
-        <button onClick={onNewChat} className="btn-primary">New Chat</button>
-      </div>
+      {/* Header (managed by parent index.tsx usually, but if duplicated here:) */}
+      {/* Note: In your index.tsx you already have a header, so this component 
+          should strictly just be the list. If this header is redundant, 
+          you might see two headers. Assuming this is the content area: */}
+      
+      {/* The List Container */}
+      <div className="history-content">
+        <div style={{ marginBottom: '16px' }}>
+             <h3 style={{ margin: 0, fontSize: '14px', opacity: 0.6, textTransform: 'uppercase', letterSpacing: '1px' }}>
+                 Archives
+             </h3>
+        </div>
 
-      {/* Scrollable List */}
-      <div className="history-content" style={{ overflowY: 'auto', flex: 1 }}>
         {loading ? (
-          <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)' }}>Loading...</div>
+          <div className="history-empty">Loading archives...</div>
         ) : sessions.length === 0 ? (
-          <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)' }}>No history found.</div>
+          <div className="history-empty">No conversation history found.</div>
         ) : (
           sessions.map(session => (
             <div 
@@ -39,8 +42,13 @@ export const ConversationHistory = ({ onSelectSession, onNewChat }: Props) => {
               onClick={() => onSelectSession(session.id)}
               className="history-item"
             >
-              {/* Clean up the title if it accidentally saved HTML context tags */}
-              {session.title.replace(/Context: <details>.*<\/summary>/, "").substring(0, 50)}
+              <div style={{ fontWeight: 600, marginBottom: '4px' }}>
+                {/* Clean Title */}
+                {session.title.replace(/Context: <details>.*<\/summary>/, "").substring(0, 40) || "Untitled Chat"}
+              </div>
+              <div style={{ fontSize: '11px', opacity: 0.6 }}>
+                {new Date(session.created_at).toLocaleDateString()}
+              </div>
             </div>
           ))
         )}
@@ -48,13 +56,11 @@ export const ConversationHistory = ({ onSelectSession, onNewChat }: Props) => {
 
       {/* Footer Actions */}
       {sessions.length > 0 && (
-        <div style={{ 
-          padding: '16px', 
-          borderTop: '1px solid var(--border-color)', 
-          // REMOVED: backgroundColor: 'white'
-          backgroundColor: 'var(--bg-main)' 
-        }}>
-          <button onClick={handleClear} className="btn-danger">Clear All History</button>
+        <div className="input-container" style={{ borderTop: 'none' }}> 
+          {/* We reuse input-container class for the glass effect at the bottom */}
+          <button onClick={handleClear} className="btn-danger">
+            Delete All History
+          </button>
         </div>
       )}
     </div>
