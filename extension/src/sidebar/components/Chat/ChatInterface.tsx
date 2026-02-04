@@ -8,11 +8,17 @@ interface Props {
   onSessionCreated: (id: number) => void;
 }
 
-export const ChatInterface = ({ sessionId, onSessionCreated }: Props) => {
-  // Use the custom hook instead of local state
-  const { messages, loading, sendMessage, loadSession, clearChat } = useChat(sessionId);
+// FIX: Remove 'onSessionCreated' from here 👇
+export const ChatInterface = ({ sessionId }: Props) => {
+  const { 
+    messages, 
+    loading, 
+    sendMessage, 
+    loadSession, 
+    clearChat, 
+    stopGeneration 
+  } = useChat(sessionId);
 
-  // Sync session ID changes
   useEffect(() => {
     if (sessionId) {
       loadSession(sessionId);
@@ -22,16 +28,19 @@ export const ChatInterface = ({ sessionId, onSessionCreated }: Props) => {
   }, [sessionId, loadSession, clearChat]);
 
   const handleSendWrapper = async (text: string, context?: string) => {
-    const newSessionId = await sendMessage(text, context);
-    if (newSessionId && !sessionId) {
-      onSessionCreated(newSessionId);
-    }
+    // FIX: Just await. Do not expect a return value.
+    await sendMessage(text, context);
   };
 
   return (
     <div className="app-container">
       <MessageList messages={messages} loading={loading} />
-      <InputBox onSend={handleSendWrapper} disabled={loading} />
+      
+      <InputBox 
+        onSend={handleSendWrapper} 
+        onStop={stopGeneration} 
+        disabled={loading} 
+      />
     </div>
   );
 };

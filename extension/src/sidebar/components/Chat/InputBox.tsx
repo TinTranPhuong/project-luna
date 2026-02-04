@@ -1,20 +1,21 @@
 import { useState, KeyboardEvent } from 'react';
-// Import your assets (Ensure these match your filenames exactly)
 import iconScan from '../../../assets/icon_scan.png';
 import iconSend from '../../../assets/icon_send.png';
+import iconStop from '../../../assets/icon_stop.png'; // <--- Import your new icon
 
 interface Props {
   onSend: (text: string, context?: string) => void;
-  disabled?: boolean;
+  onStop: () => void;      // <--- New Prop
+  disabled?: boolean;      // This now means "Is Loading"
 }
 
-export const InputBox = ({ onSend, disabled }: Props) => {
+export const InputBox = ({ onSend, onStop, disabled }: Props) => {
   const [text, setText] = useState('');
   const [attachedContext, setAttachedContext] = useState<string | null>(null);
   const [isReading, setIsReading] = useState(false);
 
   const handleSend = () => {
-    if (text.trim() && !disabled) {
+    if (text.trim()) {
       onSend(text, attachedContext || undefined);
       setText('');
       setAttachedContext(null);
@@ -53,7 +54,6 @@ export const InputBox = ({ onSend, disabled }: Props) => {
   return (
     <div className="input-container">
       
-      {/* Attachment Indicator (Remains text for clarity) */}
       {attachedContext && (
         <div className="attachment-badge">
           <span>Page Attached</span>
@@ -63,47 +63,51 @@ export const InputBox = ({ onSend, disabled }: Props) => {
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
         
-        {/* SCAN BUTTON (Icon) */}
+        {/* SCAN BUTTON */}
         <button
           onClick={handleAttachContext}
           disabled={disabled || isReading}
-          title="Scan this page"
           className="icon-btn"
-          style={{ opacity: attachedContext ? 1 : 0.6 }} // Dim if not attached
+          title="Scan Page"
         >
-          <img 
-            src={iconScan} 
-            alt="Scan" 
-            style={{ 
-              width: '24px', 
-              height: '24px',
-              // Add a subtle spin animation if reading
-              animation: isReading ? 'spin 1s linear infinite' : 'none'
-            }} 
-          />
+          <img src={iconScan} alt="Scan" style={{ width: '24px', height: '24px' }} />
         </button>
 
-        {/* INPUT FIELD */}
+        {/* INPUT */}
         <input
           type="text"
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Ask Luna..."
-          disabled={disabled}
+          placeholder={disabled ? "Luna is typing..." : "Ask Luna..."}
+          disabled={disabled} // Disable typing while generating? Optional.
           className="chat-input" 
         />
         
-        {/* SEND BUTTON (Icon) */}
-        <button
-          onClick={handleSend}
-          disabled={disabled || !text.trim()}
-          className="icon-btn send-btn"
-          title="Send"
-        >
-          <img src={iconSend} alt="Send" style={{ width: '24px', height: '24px' }} />
-        </button>
+        {/* SEND / STOP TOGGLE */}
+        {disabled ? (
+          //  STOP BUTTON
+          <button
+            onClick={onStop}
+            className="icon-btn send-btn"
+            title="Stop Generation"
+            style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)' }} // Light Red background
+          >
+            <img src={iconStop} alt="Stop" style={{ width: '24px', height: '24px' }} />
+          </button>
+        ) : (
+          // SEND BUTTON
+          <button
+            onClick={handleSend}
+            disabled={!text.trim()}
+            className="icon-btn send-btn"
+            title="Send"
+          >
+            <img src={iconSend} alt="Send" style={{ width: '24px', height: '24px' }} />
+          </button>
+        )}
       </div>
     </div>
   );
 };
+
