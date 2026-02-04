@@ -1,11 +1,4 @@
-//import { createRoot } from 'react-dom/client';
-import { useState, useEffect } from 'react';
-
-interface Session {
-  id: number;
-  title: string;
-  created_at: string;
-}
+import { useHistory } from '../../hooks/useHistory';
 
 interface Props {
   onSelectSession: (id: number) => void;
@@ -13,113 +6,55 @@ interface Props {
 }
 
 export const ConversationHistory = ({ onSelectSession, onNewChat }: Props) => {
-  const [sessions, setSessions] = useState<Session[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { sessions, loading, clearAllSessions } = useHistory();
 
-  useEffect(() => {
-    loadSessions();
-  }, []);
-
-  const loadSessions = () => {
-    fetch('http://localhost:8000/api/v1/chat/sessions')
-      .then(res => res.json())
-      .then(data => {
-        setSessions(data);
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error("Failed to load history:", err);
-        setLoading(false);
-      });
-  };
-
-  const handleClearMemory = async () => {
-    if (!confirm("⚠️ Are you sure? This will delete ALL chat history permanently.")) {
-      return;
-    }
-
-    try {
-      await fetch('http://localhost:8000/api/v1/chat/sessions', {
-        method: 'DELETE'
-      });
-      // Clear the list locally
-      setSessions([]);
-      // Start a fresh chat
+  const handleClear = async () => {
+    if (confirm("Are you sure you want to delete all chat history?")) {
+      await clearAllSessions();
       onNewChat();
-    } catch (e) {
-      alert("Failed to wipe memory. Is the server running?");
     }
   };
 
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: '#F9F9F9' }}>
+    // REMOVED: style={{ backgroundColor: '#F9F9F9' }}
+    // The class 'app-container' now handles the background color automatically
+    <div className="app-container">
+      
       {/* Header */}
-      <div style={{ padding: '16px', borderBottom: '1px solid #E5E5EA', fontWeight: 'bold', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span>🕒 Recent Chats</span>
-        <button 
-          onClick={onNewChat}
-          style={{
-            padding: '6px 12px',
-            backgroundColor: '#007AFF',
-            color: 'white',
-            border: 'none',
-            borderRadius: '16px',
-            fontSize: '12px',
-            cursor: 'pointer'
-          }}
-        >
-          + New
-        </button>
+      <div className="header">
+        <span>Recent Chats</span>
+        <button onClick={onNewChat} className="btn-primary">New Chat</button>
       </div>
 
-      {/* List */}
-      <div style={{ overflowY: 'auto', flex: 1 }}>
+      {/* Scrollable List */}
+      <div className="history-content" style={{ overflowY: 'auto', flex: 1 }}>
         {loading ? (
-          <div style={{ padding: '20px', textAlign: 'center', color: '#888' }}>Loading...</div>
+          <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)' }}>Loading...</div>
         ) : sessions.length === 0 ? (
-          <div style={{ padding: '20px', textAlign: 'center', color: '#888' }}>No history yet.</div>
+          <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)' }}>No history found.</div>
         ) : (
           sessions.map(session => (
             <div 
               key={session.id}
               onClick={() => onSelectSession(session.id)}
-              style={{
-                padding: '12px 16px',
-                borderBottom: '1px solid #EFEFEF',
-                cursor: 'pointer',
-                backgroundColor: 'white',
-                fontSize: '14px',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F2F2F7'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+              className="history-item"
             >
-              {session.title}
+              {/* Clean up the title if it accidentally saved HTML context tags */}
+              {session.title.replace(/Context: <details>.*<\/summary>/, "").substring(0, 50)}
             </div>
           ))
         )}
       </div>
 
-      {/* Footer: Clear Button */}
+      {/* Footer Actions */}
       {sessions.length > 0 && (
-        <div style={{ padding: '16px', borderTop: '1px solid #E5E5EA', backgroundColor: 'white' }}>
-          <button
-            onClick={handleClearMemory}
-            style={{
-              width: '100%',
-              padding: '10px',
-              backgroundColor: '#FF3B30', // Danger Red
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              fontWeight: 600,
-              cursor: 'pointer'
-            }}
-          >
-            🗑️ Clear Memory
-          </button>
+        <div style={{ 
+          padding: '16px', 
+          borderTop: '1px solid var(--border-color)', 
+          // REMOVED: backgroundColor: 'white'
+          backgroundColor: 'var(--bg-main)' 
+        }}>
+          <button onClick={handleClear} className="btn-danger">Clear All History</button>
         </div>
       )}
     </div>
