@@ -8,7 +8,7 @@ interface Props {
   onSessionCreated: (id: number) => void;
 }
 
-// FIX: Remove 'onSessionCreated' from here 👇
+// FIX: Remove 'onSessionCreated' from here 
 export const ChatInterface = ({ sessionId }: Props) => {
   const { 
     messages, 
