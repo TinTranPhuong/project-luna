@@ -1,10 +1,21 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from server.src.api.routers import chat, memory
+from server.src.core.rag.store import store
 
 # Import the Smart Router we just created
 from server.src.api.routers import chat
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: Run the Janitor
+    print("Server Starting... Running Cleanup Task.")
+    store.cleanup()
+    yield
+    # Shutdown: (Optional) Any shutdown logic goes here
+    print("Server Shutting Down...")
+    
 # Initialize the Application
 app = FastAPI(title="Luna Server", version="1.1")
 
@@ -18,11 +29,9 @@ app.add_middleware(
 )
 
 # 2. Register the Chat Router
-# This connects your "Smart Router" to the main application
-# The prefix means all chat requests go to: http://localhost:8000/api/v1/chat
 app.include_router(chat.router, prefix="/api/v1/chat", tags=["chat"])
 app.include_router(memory.router, prefix="/api/v1/memory", tags=["Memory"])
-
+    
 # 3. Health Check Endpoint
 @app.get("/")
 async def root():
