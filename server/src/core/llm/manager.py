@@ -10,7 +10,7 @@ class LLMManager:
         self.model_path = get_model_path(self.current_model_key)
         
         # Initialize the adapter with the config-derived path
-        self.provider = LlamaCppAdapter(model_path=self.model_path, n_ctx=20480)
+        self.provider = LlamaCppAdapter(model_path=self.model_path, n_ctx=20000)
         self.prompt_manager = PromptManager()
 
     async def initialize(self):
