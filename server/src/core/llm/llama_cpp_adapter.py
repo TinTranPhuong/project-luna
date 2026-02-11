@@ -1,10 +1,12 @@
 from llama_cpp import Llama
 from typing import List, Dict, Any, AsyncGenerator
 import os
+import json
+import asyncio
 
 class LlamaCppAdapter:
     # We change 'model_filename' to 'model_path' to match the Manager
-    def __init__(self, model_path: str, n_ctx: int = 8192):
+    def __init__(self, model_path: str, n_ctx: int = 20000):
         self.model_path = model_path
         self.n_ctx = n_ctx
         self.llm = None
@@ -48,7 +50,29 @@ class LlamaCppAdapter:
         )
         
         for chunk in stream:
-            if "choices" in chunk and len(chunk["choices"]) > 0:
-                delta = chunk["choices"][0].get("delta", {})
-                if "content" in delta:
-                    yield delta["content"]
+            # 2. THE MAGIC FIX: Yield control to the event loop!
+            # This lets FastAPI "flush" the data to the user immediately.
+            await asyncio.sleep(0) 
+
+            # Handle JSON Strings
+            if isinstance(chunk, str):
+                try:
+                    chunk = json.loads(chunk)
+                except: continue
+
+            # Handle Objects
+            if not isinstance(chunk, dict) and hasattr(chunk, 'choices'):
+                try:
+                    delta = chunk.choices[0].delta
+                    if hasattr(delta, 'content') and delta.content:
+                        yield delta.content
+                except: pass
+                continue
+
+            # Handle Dictionaries
+            if isinstance(chunk, dict):
+                if "choices" in chunk and len(chunk["choices"]) > 0:
+                    delta = chunk["choices"][0].get("delta", {})
+                    content = delta.get("content", "")
+                    if content:
+                        yield content

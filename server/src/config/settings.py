@@ -25,8 +25,8 @@ os.makedirs(RAG_DATA_DIR, exist_ok=True)
 
 # --- MODEL REGISTRY ---
 MODEL_REGISTRY = {
+    #"default": "Qwen2.5-VL-7B-Instruct-Q4_K_M.gguf" ,
     "default": "DeepSeek-R1-Distill-Qwen-14B-Q4_K_M.gguf",
-    "vision": "mmproj-Qwen2.5-VL-7B-Instruct-bf16.gguf" 
 }
 
 # --- RAG CONFIGURATION ---

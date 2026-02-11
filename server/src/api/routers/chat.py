@@ -5,12 +5,12 @@ from sqlalchemy import select, desc, delete
 from typing import List, Optional
 from pydantic import BaseModel
 from datetime import datetime
+import time
 
 # Imports
 from server.src.data.database.sqlite import get_db
 from server.src.data.database.models import ChatSession, ChatMessage
 from server.src.core.llm.manager import LLMManager
-
 from server.src.core.rag.retrieve import retriever
 
 router = APIRouter()
@@ -136,10 +136,28 @@ async def chat_endpoint(request: ChatRequest, db: AsyncSession = Depends(get_db)
         # Ideally, we should handle this differently, but for now, we assume simple usage.
         # Note: Saving async inside a generator can be tricky. 
         # A common pattern is to save it after the loop if possible or use a background task.
-        # For simplicity in this script, we skip saving AI reply to DB in this specific block 
-        # or you would need a separate 'save_message' call here.
+        
+        # --- FIX: Manually get a fresh DB session ---
+        if full_response:
+            print(f"Saving AI response for Session {session.id}...")
+            # We iterate the get_db generator to get a new session
+            async for db_new in get_db():
+                try:
+                    ai_msg = ChatMessage(session_id=session.id, role="assistant", content=full_response)
+                    db_new.add(ai_msg)
+                    await db_new.commit()
+                except Exception as e:
+                    print(f"Failed to save history: {e}")
+                finally:
+                    break # We only need one session, then exit the loop
 
-    return StreamingResponse(iter_response(), media_type="text/plain")
+    # CREATE RESPONSE OBJECT
+    response = StreamingResponse(iter_response(), media_type="text/event-stream")
+    
+    # ATTACH THE KEY 
+    response.headers["X-Session-ID"] = str(session.id)
+    
+    return response
 
 @router.delete("/sessions")
 async def clear_all_sessions(db: AsyncSession = Depends(get_db)):

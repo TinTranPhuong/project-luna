@@ -6,10 +6,8 @@ export const useChat = (initialSessionId: number | null) => {
   const [loading, setLoading] = useState(false);
   const [sessionId, setSessionId] = useState<number | null>(initialSessionId);
   
-  // Ref to control the "Stop" button
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  // --- STOP FUNCTION ---
   const stopGeneration = useCallback(() => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort(); 
@@ -18,8 +16,8 @@ export const useChat = (initialSessionId: number | null) => {
     }
   }, []);
 
-  // --- SEND FUNCTION (Streaming) ---
-  const sendMessage = useCallback(async (text: string, context?: string) => {
+  // UPDATE: Added 'useRag' parameter
+  const sendMessage = useCallback(async (text: string, useRag: boolean, context?: string) => {
     let displayContent = text;
     let payloadMessage = text;
 
@@ -29,33 +27,38 @@ export const useChat = (initialSessionId: number | null) => {
       payloadMessage = `${contextBlock}\n\nQuestion: ${text}`;
     }
 
-    // 1. Add User Message
     const userMsg: Message = { id: Date.now().toString(), role: 'user', content: displayContent };
-    
-    // 2. Add Empty AI Message (Placeholder for streaming)
     const aiMsgId = (Date.now() + 1).toString();
     const aiMsg: Message = { id: aiMsgId, role: 'assistant', content: "" };
     
     setMessages((prev) => [...prev, userMsg, aiMsg]);
     setLoading(true);
 
-    // 3. Prepare Abort Controller (For Stop Button)
     abortControllerRef.current = new AbortController();
 
     try {
-      const payload: any = { message: payloadMessage };
+      const payload: any = { 
+        message: payloadMessage,
+        use_rag: useRag // <--- Sending the Toggle State to Backend
+      };
       if (sessionId) payload.session_id = sessionId;
 
-      const response = await fetch('http://localhost:8000/api/v1/chat', {
+      // UPDATE: Use 127.0.0.1 for reliability
+      const response = await fetch('http://127.0.0.1:8000/api/v1/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
-        signal: abortControllerRef.current.signal // Connect the stop button
+        signal: abortControllerRef.current.signal
       });
+
+      const newSessionId = response.headers.get("x-session-id");
+      if (newSessionId) {
+          console.log("Chat Locked to Session:", newSessionId);
+          setSessionId(Number(newSessionId)); 
+      }
 
       if (!response.body) throw new Error("No response body");
 
-      // 4. READ THE STREAM
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let aiText = "";
@@ -63,12 +66,8 @@ export const useChat = (initialSessionId: number | null) => {
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-
-        // Decode chunk and append to text
         const chunk = decoder.decode(value, { stream: true });
         aiText += chunk;
-
-        // Update UI instantly
         setMessages((prev) => 
           prev.map(msg => msg.id === aiMsgId ? { ...msg, content: aiText } : msg)
         );
@@ -76,8 +75,7 @@ export const useChat = (initialSessionId: number | null) => {
 
     } catch (error: any) {
       if (error.name === 'AbortError') {
-        console.log("Generation stopped by user");
-        // Optional: Add a " [Stopped]" marker
+        console.log("Generation stopped");
       } else {
         console.error(error);
         setMessages((prev) => [...prev, { id: Date.now().toString(), role: 'assistant', content: "⚠️ Error: Server connection failed." }]);
@@ -92,7 +90,7 @@ export const useChat = (initialSessionId: number | null) => {
     setLoading(true);
     setSessionId(id);
     try {
-      const res = await fetch(`http://localhost:8000/api/v1/chat/history/${id}`);
+      const res = await fetch(`http://127.0.0.1:8000/api/v1/chat/history/${id}`);
       const data = await res.json();
       const uiMessages = data.map((msg: any) => ({
         id: msg.id.toString(),
@@ -114,5 +112,3 @@ export const useChat = (initialSessionId: number | null) => {
 
   return { messages, loading, sessionId, loadSession, sendMessage, clearChat, stopGeneration };
 };
-
-  

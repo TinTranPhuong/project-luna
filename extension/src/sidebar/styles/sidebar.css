@@ -1,68 +1,70 @@
 /* --- THEME VARIABLES --- */
 :root {
-    /* --- SOFT NEON MODE (Lighter, Less Harsh) --- */
-    --bg-app: #f8fafc; /* Very soft cool white */
-    --bg-gradient: linear-gradient(180deg, #f8fafc 0%, #edf2f7 100%);
+    /* --- SOFT NEON MODE (Based on your Circle Image) --- */
+    --bg-app: #f8fbff; /* Very soft white/blue tint */
+    --bg-gradient: linear-gradient(180deg, #f8fbff 0%, #eff6ff 100%);
     
-    /* HEADER: Clean & Solid (No Glass Blur to prevent weird layering) */
+    /* HEADER: Clean & Solid */
     --header-bg: #ffffff;
-    --header-border: 1px solid #e2e8f0; 
+    --header-border: 1px solid #e0f2fe; 
     
-    /* TEXT: Softer Pink/Purple */
-    --text-primary: #d778c2;   /* Raspberry Pink (Readable) */
+    /* TEXT: The "Pink" from the circle's left side */
+    --text-primary: #ff8fab;   /* Soft Pastel Pink */
     --text-secondary: #64748b; /* Slate Grey */
     --text-inverse: #ffffff;
     
-    /* BUBBLES */
-    --bubble-user: linear-gradient(135deg, #f472b6 0%, #60a5fa 100%); /* Pastel Pink -> Blue */
+    /* BUBBLES: Gradient from Pink -> Blue (Like the circle) */
+    --bubble-user: linear-gradient(135deg, #ff8fab 0%, #4cc9f0 100%); 
     --bubble-ai: #ffffff;
-    --bubble-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); /* Soft Shadow */
+    --bubble-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); 
     --bubble-border-user: 1px solid transparent;
-    --bubble-border-ai: 1px solid #e2e8f0;
+    --bubble-border-ai: 1px solid #e0f2fe;
     
     /* INPUTS */
     --input-bg: #ffffff;
-    --input-border: 1px solid #cbd5e1;
-    --input-focus-ring: 0 0 0 3px rgba(244, 114, 182, 0.2); /* Soft Pink Glow */
+    --input-border: 1px solid #bae6fd; /* Light Blue Border */
+    --input-focus-ring: 0 0 0 3px rgba(255, 143, 171, 0.2); /* Soft Pink Glow */
     
     /* EXTRAS */
-    --code-bg: #1e293b; /* Slate Dark */
-    --code-inline-bg: #f1f5f9;
+    --code-bg: #1e293b; 
+    --code-inline-bg: #f0f9ff;
     --scrollbar-thumb: #cbd5e1;
     
-    /* BUTTONS */
-    --btn-primary-bg: #60a5fa;
-    --btn-primary-shadow: 0 4px 6px -1px rgba(96, 165, 250, 0.4);
+    /* BUTTONS: The "Blue" from the circle's right side */
+    --btn-primary-bg: #4cc9f0; /* Sky Blue */
+    --btn-primary-shadow: 0 4px 6px -1px rgba(76, 201, 240, 0.4);
 }
 
 [data-theme='dark'] {
-    /* DARK MODE (Cyberpunk) - Kept high contrast */
-    --bg-app: #0f172a;
-    --bg-gradient: radial-gradient(circle at top right, #1e293b, #0f172a 70%);
+    /* DARK MODE (Deep Ocean Blue - Like the image bottom) */
+    --bg-app: #102a43; /* Deep Navy Blue */
+    --bg-gradient: radial-gradient(circle at top right, #1e3a8a, #102a43 70%);
     
-    --header-bg: rgba(15, 23, 42, 0.95);
-    --header-border: 1px solid #1e293b;
+    --header-bg: rgba(16, 42, 67, 0.95);
+    --header-border: 1px solid #243b53;
     
-    --text-primary: #f472b6; 
-    --text-secondary: #94a3b8;
+    /* Text pops with the lighter Pink */
+    --text-primary: #ffb3c1; 
+    --text-secondary: #9fb3c8;
     --text-inverse: #ffffff;
     
-    --bubble-user: linear-gradient(135deg, #db2777, #3b82f6);
-    --bubble-ai: #1e293b;
+    /* Bubble Gradient remains Pink -> Blue but slightly richer */
+    --bubble-user: linear-gradient(135deg, #ff8fab, #48cae4);
+    --bubble-ai: #102a43;
     --bubble-shadow: 0 4px 10px rgba(0,0,0,0.3);
     --bubble-border-user: none;
-    --bubble-border-ai: 1px solid #334155;
+    --bubble-border-ai: 1px solid #243b53;
     
-    --input-bg: #1e293b;
-    --input-border: 1px solid #334155;
+    --input-bg: #102a43;
+    --input-border: 1px solid #243b53;
     
     --code-bg: #000000;
-    --code-inline-bg: #334155;
+    --code-inline-bg: #243b53;
     
-    --scrollbar-thumb: #475569;
+    --scrollbar-thumb: #334e68;
 }
 
-/* --- RESET & LAYOUT --- */
+/* --- RESET & LAYOUT (Unchanged) --- */
 body {
     margin: 0;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -73,15 +75,14 @@ body {
 
 .app-container {
     display: flex;
-    flex-direction: column; /* Stacks items vertically */
+    flex-direction: column; 
     height: 100vh;
     background: var(--bg-app);
     background-image: var(--bg-gradient);
 }
 
-/* --- HEADER (Flex Item - Cannot Overlap) --- */
+/* --- HEADER --- */
 .header {
-    /* Force it to stick to the top, ignoring flex rules */
     position: absolute;  
     top: 0;             
     left: 0;            
@@ -123,7 +124,7 @@ body {
     background: rgba(0,0,0,0.03);
 }
 
-/* --- SCROLL CONTENT (Fills remaining space) --- */
+/* --- SCROLL CONTENT --- */
 .chat-content, .history-content {
     flex: 1;
     overflow-y: auto;
@@ -173,7 +174,7 @@ body {
 
 .message-bubble.assistant {
     background: var(--bubble-ai);
-    color: var(--text-primary); /* Pinkish Text */
+    color: var(--text-primary); 
     border: var(--bubble-border-ai);
     border-bottom-left-radius: 4px;
 }
@@ -182,7 +183,7 @@ body {
 .input-container {
     flex-shrink: 0;
     padding: 20px;
-    background: var(--bg-app); /* Match bg */
+    background: var(--bg-app); 
     border-top: var(--header-border);
 }
 
@@ -204,13 +205,13 @@ body {
 }
 
 .chat-input:focus {
-    border-color: #f472b6;
+    border-color: #ff8fab; /* Pink Border Focus */
     box-shadow: var(--input-focus-ring);
 }
 
 /* --- BUTTONS --- */
 .btn-primary {
-    background: #60a5fa; /* Soft Blue */
+    background: var(--btn-primary-bg);
     color: white;
     padding: 8px 16px;
     border-radius: 20px;
@@ -223,7 +224,7 @@ body {
 
 .btn-primary:active { transform: scale(0.96); }
 
-/* --- DANGER BUTTON (Red) --- */
+/* --- DANGER BUTTON --- */
 .btn-danger {
     width: 100%;
     padding: 12px;
@@ -253,7 +254,7 @@ body {
 }
 
 .history-item:hover {
-    border-color: #f472b6; /* Soft Pink Border on Hover */
+    border-color: #ff8fab; /* Pink Border on Hover */
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0,0,0,0.05);
 }
@@ -279,7 +280,7 @@ body {
     border: none;
     cursor: pointer;
     padding: 8px;
-    border-radius: 50%; /* Circle shape */
+    border-radius: 50%; 
     display: flex;
     align-items: center;
     justify-content: center;
@@ -288,12 +289,12 @@ body {
 }
 
 [data-theme='dark'] .icon-btn {
-     background-color: rgba(96, 165, 250, 0.3);
+     background-color: rgba(76, 201, 240, 0.1); /* Slight Blue Tint */
 }
 
 .icon-btn:hover {
-    background-color: rgba(96, 165, 250, 0.5); 
-    box-shadow: 0 0 10px rgba(96, 165, 250, 0.4);
+    background-color: rgba(76, 201, 240, 0.2); 
+    box-shadow: 0 0 10px rgba(76, 201, 240, 0.2);
     transform: scale(1.1);
 }
 
@@ -303,19 +304,18 @@ body {
 
 .icon-btn:disabled {
     opacity: 0.5;
-    background-color: rgba(150, 150, 150, 0.2); /* Grey out if disabled */
+    background-color: rgba(150, 150, 150, 0.2); 
     cursor: not-allowed;
     box-shadow: none;
     transform: none;
 }
 
-/* Send Button Special Styling (Optional) */
 .send-btn {
     margin-left: 4px;
 }
 .send-btn:hover {
-    background-color: transparent; /* Don't background hover the send button if not needed */
-    filter: drop-shadow(0 0 2px var(--text-primary)); /* Glow effect */
+    background-color: transparent; 
+    filter: drop-shadow(0 0 2px var(--text-primary)); 
 }
 
 /* --- ATTACHMENT BADGE --- */
@@ -324,7 +324,7 @@ body {
     display: flex;
     align-items: center;
     font-size: 12px;
-    background-color: var(--bubble-user); /* Use theme color */
+    background-color: #4cc9f0; /* Sky Blue Badge */
     color: white;
     padding: 4px 10px;
     border-radius: 12px;
@@ -340,13 +340,13 @@ body {
     font-weight: bold;
 }
 
-/* --- SETTINGS MENU (Dropdown) --- */
+/* --- SETTINGS MENU --- */
 .settings-menu {
     position: absolute;
-    top: 40px; /* Below the menu icon */
+    top: 40px; 
     left: 0;
     width: 160px;
-    background-color: var(--header-bg); /* Match header theme */
+    background-color: var(--header-bg); 
     border: var(--header-border);
     border-radius: 12px;
     box-shadow: 0 4px 15px rgba(0,0,0,0.15);
@@ -371,7 +371,6 @@ body {
     background-color: rgba(0,0,0,0.05);
 }
 
-/* Dark mode adjustment for hover */
 [data-theme='dark'] .menu-item:hover {
     background-color: rgba(255,255,255,0.1);
 }
@@ -379,8 +378,186 @@ body {
     background-color: rgba(255,255,255,0.1);
 }
 
-/* Spin Animation for Scanning */
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
+}
+
+/* --- MEMORY VIEWER --- */
+.memory-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.memory-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 12px;
+    border-bottom: var(--header-border);
+    margin-bottom: 8px;
+}
+
+.memory-header h3 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-primary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* ADD NOTE FORM */
+.memory-add-form {
+    background: var(--bubble-ai);
+    border: var(--bubble-border-ai);
+    padding: 12px;
+    border-radius: 12px;
+    margin-bottom: 16px;
+    box-shadow: var(--bubble-shadow);
+    animation: fadeIn 0.3s ease;
+}
+
+.memory-input {
+    width: 100%;
+    padding: 10px;
+    border-radius: 8px;
+    border: var(--input-border);
+    background: var(--input-bg);
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 13px;
+    resize: vertical;
+    outline: none;
+    box-sizing: border-box; /* Important for padding */
+}
+
+.memory-input:focus {
+    box-shadow: var(--input-focus-ring);
+    border-color: #ff8fab;
+}
+
+/* FOLDER SYSTEM */
+.memory-folder {
+    background: var(--bubble-ai);
+    border: var(--bubble-border-ai);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.2s ease;
+    box-shadow: var(--bubble-shadow);
+}
+
+.folder-header {
+    padding: 12px 16px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    font-weight: 600;
+    user-select: none;
+    transition: background 0.1s;
+}
+
+.folder-header:hover {
+    background: rgba(0,0,0,0.02);
+}
+
+.folder-count {
+    background: var(--btn-primary-bg);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+/* MEMORY CHUNKS */
+.folder-content {
+    padding: 0 12px 12px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.memory-card {
+    padding: 10px;
+    border-radius: 8px;
+    /* Subtle contrast against the bubble background */
+    background: rgba(128, 128, 128, 0.05); 
+    border: 1px solid transparent;
+    transition: all 0.2s;
+}
+
+[data-theme='dark'] .memory-card {
+    background: rgba(0, 0, 0, 0.2); 
+}
+
+.memory-card:hover {
+    border-color: var(--input-border);
+}
+
+.memory-text {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.memory-meta {
+    margin-top: 8px;
+    padding-top: 6px;
+    border-top: 1px dashed var(--input-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 10px;
+    color: var(--text-secondary);
+    opacity: 0.7;
+}
+
+/* ACTION BUTTONS */
+.action-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+    margin-left: 4px;
+    transition: color 0.2s;
+}
+
+.btn-edit { color: #3b82f6; }
+.btn-edit:hover { background: rgba(59, 130, 246, 0.1); }
+
+.btn-delete { color: #ef4444; }
+.btn-delete:hover { background: rgba(239, 68, 68, 0.1); }
+
+.btn-small-primary {
+    background: var(--btn-primary-bg);
+    color: white;
+    border: none;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.btn-small-cancel {
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1px solid var(--input-border);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    cursor: pointer;
 }

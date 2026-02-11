@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "Luna - AI Browser Assistant",
-  "version": "0.1.0",
+  "name": "Luna",
+  "version": "1.1",
   "default_locale": "en",
-  "description": "Your local AI companion powered by Project Luna.",
+  "description": "Your Luna Assistant companion powered by kyuna.",
   "permissions": [
     "sidePanel",
     "storage",
