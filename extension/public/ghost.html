@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Luna Search Protocol</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --term-bg: rgba(15, 23, 42, 0.95);
+            --border: rgba(56, 189, 248, 0.3);
+            --text-primary: #48cae4; 
+            --text-secondary: #fff4f7;
+            --text-highlight: #ff8fab; 
+        }
+
+        body {
+            background-color: var(--bg-color);
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Courier New', Courier, monospace;
+            overflow: hidden;
+            
+            background-image: 
+                linear-gradient(rgba(56, 189, 248, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(56, 189, 248, 0.05) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+
+        .window {
+            width: 700px; /* Made slightly wider to fit new image size */
+            background: var(--term-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            box-shadow: 0 0 40px rgba(56, 189, 248, 0.15);
+            backdrop-filter: blur(10px);
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .window-header {
+            background: rgba(56, 189, 248, 0.1);
+            padding: 10px 15px;
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .controls {
+            display: flex;
+            gap: 8px;
+            margin-right: 15px;
+        }
+
+        .dot { width: 10px; height: 10px; border-radius: 50%; }
+        .red { background: #ef4444; }
+        .yellow { background: #eab308; }
+        .green { background: #22c55e; }
+
+        .title {
+            color: var(--text-secondary);
+            font-size: 12px;
+            letter-spacing: 1px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .content-area {
+            display: flex;
+            align-items: center;
+            padding: 30px;
+            gap: 25px;
+            min-height: 180px; /* Taller to fit image */
+        }
+
+        .avatar-container {
+            flex-shrink: 0;
+            width: 160px;  
+            height: 190px; 
+            border-radius: 16px;
+            border: 2px solid var(--text-highlight);
+            padding: 4px;
+            box-shadow: 0 0 25px rgba(255, 143, 171, 0.25);
+            background: rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .avatar-img {
+            width: 100%;
+            height: 100%;
+            border-radius: 12px; 
+            object-fit: cover;
+        }
+
+        .terminal-text {
+            flex-grow: 1;
+            color: var(--text-primary);
+            font-size: 15px;
+            line-height: 1.6;
+        }
+
+        .cursor {
+            display: inline-block;
+            width: 8px;
+            height: 16px;
+            background: var(--text-primary);
+            animation: blink 1s step-end infinite;
+            vertical-align: middle;
+            margin-left: 4px;
+        }
+
+        .progress-line {
+            height: 3px;
+            background: var(--text-primary);
+            width: 0%;
+            transition: width 0.1s linear;
+        }
+
+        @keyframes blink { 50% { opacity: 0; } }
+        @keyframes popIn {
+            from { transform: scale(0.9); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    
+    <div class="window">
+        <div class="window-header">
+            <div class="controls">
+                <div class="dot red"></div>
+                <div class="dot yellow"></div>
+                <div class="dot green"></div>
+            </div>
+            <div class="title"> LUNA IS SEARCHING ... </div>
+        </div>
+        
+        <div class="content-area">
+            <div class="avatar-container">
+                <img src="avatar.png" class="avatar-img" alt="Luna">
+            </div>
+
+            <div class="terminal-text">
+                <div id="output"></div><span class="cursor"></span>
+            </div>
+        </div>
+        
+        <div class="progress-line" id="progress"></div>
+    </div>
+
+    <script src="ghost.js"></script>
+</body>
+</html>

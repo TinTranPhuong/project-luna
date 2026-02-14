@@ -2,12 +2,6 @@ import os
 from pathlib import Path
 
 # --- PATH CONFIGURATION ---
-# Structure: server/src/config/settings.py
-# .parent = config
-# .parent.parent = src
-# .parent.parent.parent = server
-# .parent.parent.parent.parent = Project_Luna (Root)
-
 CURRENT_FILE = Path(__file__).resolve()
 SRC_ROOT = CURRENT_FILE.parent.parent
 PROJECT_ROOT = CURRENT_FILE.parent.parent.parent.parent
@@ -25,9 +19,11 @@ os.makedirs(RAG_DATA_DIR, exist_ok=True)
 
 # --- MODEL REGISTRY ---
 MODEL_REGISTRY = {
-    #"default": "Qwen2.5-VL-7B-Instruct-Q4_K_M.gguf" ,
-    "default": "DeepSeek-R1-Distill-Qwen-14B-Q4_K_M.gguf",
+    "default": "Qwen3VL-8B-Instruct-Q8_0.gguf" ,
 }
+
+MMPROJ_FILENAME = "mmproj-Qwen3VL-8B-Instruct-F16.gguf"
+MMPROJ_PATH = str(MODEL_DIR / MMPROJ_FILENAME)
 
 # --- RAG CONFIGURATION ---
 # CPU-Optimized Embedding Model
@@ -57,4 +53,4 @@ def get_model_path(model_key: str = "default") -> str:
 
 # --- CONTEXT MANAGEMENT ---
 MAX_HISTORY_MESSAGES = 10 
-MAX_CONTEXT_TOKENS = 4096
+MAX_CONTEXT_TOKENS = 8192

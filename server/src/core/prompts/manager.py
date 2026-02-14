@@ -1,6 +1,6 @@
 from typing import List, Dict, Any
 from .templates.system import CORE_SYSTEM_PROMPT
-# Import the limit from settings
+from datetime import datetime
 from server.src.config.settings import MAX_HISTORY_MESSAGES
 
 class PromptManager:
@@ -9,7 +9,9 @@ class PromptManager:
     """
     
     def __init__(self):
-        self.system_prompt = CORE_SYSTEM_PROMPT
+        current_time = datetime.now().strftime("%A, %B %d, %Y at %I:%M %p")
+        
+        self.system_prompt = f"Current Date & Time: {current_time}\n\n{CORE_SYSTEM_PROMPT}"
 
     def build_messages(self, chat_history: List[Dict[str, str]]) -> List[Dict[str, str]]:
         """

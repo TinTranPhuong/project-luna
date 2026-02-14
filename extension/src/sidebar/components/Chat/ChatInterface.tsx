@@ -9,9 +9,11 @@ interface Props {
 }
 
 export const ChatInterface = ({ sessionId }: Props) => {
-  // NEW: State for RAG Toggle
-  const [useRag, setUseRag] = useState(true);
-
+  const useRag = true; 
+  
+  // State for EITHER a Snippet OR an Uploaded Image
+  const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  
   const { 
     messages, 
     loading, 
@@ -29,49 +31,87 @@ export const ChatInterface = ({ sessionId }: Props) => {
     }
   }, [sessionId, loadSession, clearChat]);
 
-  const handleSendWrapper = async (text: string, context?: string) => {
-    // Pass the useRag state to the hook
-    await sendMessage(text, useRag, context);
+  // Listen for "PROCESS_CROP" from Background Script (Snipping Tool)
+  useEffect(() => {
+    const handleMessage = (request: any) => {
+      if (request.action === "PROCESS_CROP") {
+        console.log("Received Crop Data, processing...");
+        cropImage(request.imageUrl, request.cropData);
+      }
+    };
+    chrome.runtime.onMessage.addListener(handleMessage);
+    return () => chrome.runtime.onMessage.removeListener(handleMessage);
+  }, []);
+
+  // Crop Logic (for Screen Snipper)
+  const cropImage = (fullImageUrl: string, crop: any) => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+
+    img.onload = () => {
+      const scale = crop.devicePixelRatio || 1; 
+      canvas.width = crop.width * scale;
+      canvas.height = crop.height * scale;
+
+      ctx?.drawImage(
+        img, 
+        crop.x * scale, crop.y * scale, crop.width * scale, crop.height * scale, 
+        0, 0, canvas.width, canvas.height 
+      );
+
+      const croppedBase64 = canvas.toDataURL('image/jpeg', 0.8);
+      setCapturedImage(croppedBase64); // Sets the image state
+    };
+    img.src = fullImageUrl;
+  };
+
+  // The function to trigger snipping
+  const handleSnipClick = () => {
+    chrome.runtime.sendMessage({ action: "START_SNIP" });
+  };
+
+  const handleSendWrapper = async (text: string) => {
+    // Send text + whatever image is currently in the preview (Snippet OR Upload)
+    await sendMessage(text, useRag, capturedImage || undefined);
+    setCapturedImage(null); // Clear preview after sending
   };
 
   return (
-    <div className="app-container">
-      {/* HEADER CONTROLS (Brain Toggle) */}
-      <div style={{ 
-        padding: '10px 20px', 
-        display: 'flex', 
-        justifyContent: 'flex-end',
-        alignItems: 'center',
-        gap: '8px',
-        backgroundColor: 'var(--header-bg)',
-        borderBottom: '1px solid var(--header-border)'
-      }}>
-        <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600 }}>
-          BRAIN:
-        </span>
-        <button 
-          onClick={() => setUseRag(!useRag)}
-          style={{
-            padding: '4px 10px',
-            borderRadius: '12px',
-            border: 'none',
-            fontSize: '11px',
-            fontWeight: 'bold',
-            cursor: 'pointer',
-            backgroundColor: useRag ? '#22c55e' : '#64748b',
-            color: 'white',
-            transition: 'all 0.2s'
-          }}
-        >
-          {useRag ? "ON" : "OFF"}
-        </button>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      
+      {/* 1. MESSAGES AREA */}
+      <div style={{ flex: 1, overflowY: 'auto', paddingTop: '60px' }}> 
+        <MessageList messages={messages} loading={loading} />
       </div>
 
-      <MessageList messages={messages} loading={loading} />
+      {/* 2. IMAGE PREVIEW (Shows up above input when you snip OR upload) */}
+      {capturedImage && (
+        <div style={{ padding: '0 20px', marginBottom: '10px' }}>
+          <div style={{ position: 'relative', display: 'inline-block' }}>
+            <img 
+              src={capturedImage} 
+              alt="Preview"
+              style={{ height: '80px', borderRadius: '8px', border: '1px solid #ff8fab', boxShadow: '0 4px 10px rgba(0,0,0,0.2)' }} 
+            />
+            <button 
+              onClick={() => setCapturedImage(null)}
+              style={{ 
+                position: 'absolute', top: -8, right: -8, background: '#ef4444', color: 'white', 
+                borderRadius: '50%', width: '22px', height: '22px', border: '2px solid white', 
+                cursor: 'pointer', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' 
+              }}
+            >✕</button>
+          </div>
+        </div>
+      )}
       
+      {/* 3. INPUT BOX (Updated to accept Uploads) */}
       <InputBox 
         onSend={handleSendWrapper} 
         onStop={stopGeneration} 
+        onSnip={handleSnipClick}
+        onImageUpload={setCapturedImage} 
         disabled={loading} 
       />
     </div>

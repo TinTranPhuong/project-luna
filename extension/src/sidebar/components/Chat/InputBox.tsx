@@ -1,24 +1,27 @@
-import { useState, KeyboardEvent } from 'react';
-import iconScan from '../../../assets/icon_scan.png';
+import { useState, KeyboardEvent, useRef } from 'react';
+import iconUpload from '../../../assets/icon_upload.png'; 
 import iconSend from '../../../assets/icon_send.png';
-import iconStop from '../../../assets/icon_stop.png'; // <--- Import your new icon
+import iconStop from '../../../assets/icon_stop.png';
+import iconScissors from '../../../assets/icon_scissors.png'; 
 
 interface Props {
-  onSend: (text: string, context?: string) => void;
-  onStop: () => void;      // <--- New Prop
-  disabled?: boolean;      // This now means "Is Loading"
+  onSend: (text: string) => void;
+  onStop: () => void;
+  onSnip: () => void;
+  onImageUpload: (base64Image: string) => void; 
+  disabled?: boolean;
 }
 
-export const InputBox = ({ onSend, onStop, disabled }: Props) => {
+export const InputBox = ({ onSend, onStop, onSnip, onImageUpload, disabled }: Props) => {
   const [text, setText] = useState('');
-  const [attachedContext, setAttachedContext] = useState<string | null>(null);
-  const [isReading, setIsReading] = useState(false);
+  
+  // Ref for the hidden file input
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleSend = () => {
     if (text.trim()) {
-      onSend(text, attachedContext || undefined);
+      onSend(text);
       setText('');
-      setAttachedContext(null);
     }
   };
 
@@ -29,85 +32,92 @@ export const InputBox = ({ onSend, onStop, disabled }: Props) => {
     }
   };
 
-  const handleAttachContext = async () => {
-    setIsReading(true);
-    try {
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      if (!tab.id) return;
-
-      chrome.tabs.sendMessage(tab.id, { action: "GET_PAGE_CONTENT" }, (response) => {
-        setIsReading(false);
-        if (chrome.runtime.lastError) {
-          alert("Refresh the page first!");
-          return;
-        }
-        if (response && response.content) {
-          setAttachedContext(response.content);
-        }
-      });
-    } catch (e) {
-      console.error(e);
-      setIsReading(false);
+  // Handle File Selection
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        // Send the image data up to ChatInterface
+        onImageUpload(reader.result as string);
+      };
+      reader.readAsDataURL(file);
     }
+    // Reset value so you can upload the same file again if you deleted it
+    e.target.value = "";
   };
 
   return (
     <div className="input-container">
       
-      {attachedContext && (
-        <div className="attachment-badge">
-          <span>Page Attached</span>
-          <button onClick={() => setAttachedContext(null)}>✕</button>
-        </div>
-      )}
+      {/* HIDDEN FILE INPUT */}
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        style={{ display: 'none' }} 
+        accept="image/*"
+        onChange={handleFileUpload}
+      />
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         
-        {/* SCAN BUTTON */}
-        <button
-          onClick={handleAttachContext}
-          disabled={disabled || isReading}
-          className="icon-btn"
-          title="Scan Page"
-        >
-          <img src={iconScan} alt="Scan" style={{ width: '24px', height: '24px' }} />
-        </button>
+        {/* LEFT TOOLS GROUP */}
+        <div style={{ display: 'flex', gap: '4px' }}>
+          
+          {/* UPLOAD BUTTON  */}
+          <button
+            onClick={() => fileInputRef.current?.click()} // Triggers the hidden input
+            disabled={disabled}
+            className="icon-btn"
+            title="Upload Image"
+          >
+            <img src={iconUpload} alt="Upload" style={{ width: '20px', height: '20px', opacity: 0.8 }} />
+          </button>
 
-        {/* INPUT */}
+          {/* SNIP BUTTON  */}
+          <button
+            onClick={onSnip}
+            disabled={disabled}
+            className="icon-btn"
+            title="Snip Screen"
+          >
+            <img src={iconScissors} alt="Snip" style={{ width: '20px', height: '20px', opacity: 0.8 }} />
+          </button>
+        </div>
+
+        {/* INPUT FIELD */}
         <input
           type="text"
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={disabled ? "Luna is typing..." : "Ask Luna..."}
-          disabled={disabled} // Disable typing while generating? Optional.
+          placeholder={disabled ? "Luna is thinking..." : "Ask Luna..."}
+          disabled={disabled}
           className="chat-input" 
+          style={{ flex: 1 }} 
         />
         
-        {/* SEND / STOP TOGGLE */}
+        {/* RIGHT ACTION BUTTON */}
         {disabled ? (
-          //  STOP BUTTON
           <button
             onClick={onStop}
             className="icon-btn send-btn"
-            title="Stop Generation"
-            style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)' }} // Light Red background
+            title="Stop"
+            style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)' }}
           >
-            <img src={iconStop} alt="Stop" style={{ width: '24px', height: '24px' }} />
+            <img src={iconStop} alt="Stop" style={{ width: '20px', height: '20px' }} />
           </button>
         ) : (
-          // SEND BUTTON
           <button
             onClick={handleSend}
             disabled={!text.trim()}
             className="icon-btn send-btn"
             title="Send"
           >
-            <img src={iconSend} alt="Send" style={{ width: '24px', height: '24px' }} />
+            <img src={iconSend} alt="Send" style={{ width: '20px', height: '20px' }} />
           </button>
         )}
       </div>
     </div>
   );
 };
-

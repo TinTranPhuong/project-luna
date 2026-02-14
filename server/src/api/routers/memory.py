@@ -200,7 +200,7 @@ async def delete_source_memory(source: str):
     Deletes ALL memory chunks linked to a specific Source URL.
     """
     try:
-        print(f"🗑️ Deleting all memories from source: {source}")
+        print(f"Deleting all memories from source: {source}")
         
         # 1. Delete from Working Memory (Tier 2)
         if hasattr(store, "working_memory"):

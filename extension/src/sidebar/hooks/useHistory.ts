@@ -32,10 +32,21 @@ export const useHistory = () => {
     }
   }, []);
 
+  // ➕ NEW: Delete Single Session
+  const deleteSession = useCallback(async (id: number) => {
+    try {
+      await fetch(`http://localhost:8000/api/v1/chat/sessions/${id}`, { method: 'DELETE' });
+      // Optimistic update (remove from list immediately)
+      setSessions(prev => prev.filter(s => s.id !== id));
+    } catch (e) {
+      console.error("Failed to delete session", e);
+    }
+  }, []);
+
   // Initial load
   useEffect(() => {
     fetchSessions();
   }, [fetchSessions]);
 
-  return { sessions, loading, fetchSessions, clearAllSessions };
+  return { sessions, loading, fetchSessions, clearAllSessions, deleteSession };
 };

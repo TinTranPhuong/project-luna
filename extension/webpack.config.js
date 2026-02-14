@@ -35,9 +35,6 @@ module.exports = {
         { 
           from: path.resolve('public'), 
           to: path.resolve('dist'),
-          globOptions: {
-            ignore: ['**/*.html'] // We handle HTML with HtmlPlugin below
-          }
         }
       ]
     }),
@@ -66,12 +63,12 @@ module.exports = {
   output: {
     filename: '[name].js',
     path: path.resolve('dist'),
-    clean: true, // Cleans the dist folder before every build
+    clean: true, 
   },
   optimization: {
     splitChunks: {
       chunks: (chunk) => chunk.name !== 'content' && chunk.name !== 'background',
-      name: 'vendor', // Share React code between Sidebar/Popup to save memory
+      name: 'vendor', 
     },
   },
 };

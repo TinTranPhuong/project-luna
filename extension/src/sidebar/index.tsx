@@ -6,7 +6,10 @@ import { useTheme } from './hooks/useTheme';
 import { api } from './api';
 import { MemoryViewer } from './components/History/MemoryViewer';
 import './styles/sidebar.css';
+
 import iconMenu from '../assets/icon_menu.png';
+import iconSun from '../assets/icon_sun.png';
+import iconMoon from '../assets/icon_moon.png';
 
 const Sidebar = () => {
   const [view, setView] = useState<'chat' | 'history' | 'memory'>('chat');
@@ -14,8 +17,24 @@ const Sidebar = () => {
   const [showMenu, setShowMenu] = useState(false);
   const [ingestUrl, setIngestUrl] = useState('');
   const [statusMsg, setStatusMsg] = useState(''); 
-
+  const [uiScale, setUiScale] = useState(1);
   const { theme, toggleTheme } = useTheme();
+
+  // --- ZOOM ACTIONS ---
+  const handleZoomIn = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setUiScale(prev => Math.min(prev + 0.1, 1.5)); // Max 150%
+  };
+
+  const handleZoomOut = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setUiScale(prev => Math.max(prev - 0.1, 0.6)); // Min 60%
+  };
+
+  const handleZoomReset = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setUiScale(1);
+  };
 
   // --- Handlers ---
   const handleSelectSession = (id: number) => {
@@ -34,7 +53,6 @@ const Sidebar = () => {
     setCurrentSessionId(id);
   };
 
-  // 1. Handle Ingest (Teach Luna)
   const handleIngest = async () => {
     if(!ingestUrl) return;
     setStatusMsg('Reading...');
@@ -48,7 +66,6 @@ const Sidebar = () => {
     }
   };
 
-  // 2. Handle Cache Clear (Flush Memory)
   const handleClearCache = async () => {
     setStatusMsg('Cleaning...');
     try {
@@ -59,9 +76,14 @@ const Sidebar = () => {
         setStatusMsg('Error');
     }
   };
+  const appStyle: any = {
+    zoom: uiScale,
+    height: `${100 / uiScale}vh`, 
+    width: `${100 / uiScale}vw`,
+  };
 
   return (
-    <div className="app-container">
+    <div className="app-container" style={appStyle}>
       {/* HEADER */}
       <div className="header">
         {view === 'chat' ? (
@@ -74,18 +96,25 @@ const Sidebar = () => {
              {/* SETTINGS MENU */}
              {showMenu && (
                <div className="settings-menu" style={{ width: '220px' }}>
-                 
+                 <div style={{ padding: '8px 10px', borderBottom: '1px solid var(--header-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: '13px', color: '#ffb3c1', fontWeight: 600 }}>ZOOM</span>
+                    <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                      <button onClick={handleZoomOut} className="zoom-btn">-</button>
+                      <span onClick={handleZoomReset} style={{ fontSize: '10px', minWidth: '35px', textAlign: 'center', cursor: 'pointer', userSelect: 'none' }} title="Reset">
+                        {Math.round(uiScale * 100)}%
+                      </span>
+                      <button onClick={handleZoomIn} className="zoom-btn">+</button>
+                    </div>
+                 </div>
+
                  <div className="menu-item" onClick={() => { setView('history'); setShowMenu(false); }}>
                    <span>History</span>
                  </div>
                  <div className="menu-item" onClick={() => { setView('memory'); setShowMenu(false); }}>
                    <span>Memory</span>
                  </div>
-                 <div className="menu-item" onClick={toggleTheme}>
-                   <span>{theme === 'light' ? 'Dark Mode' : 'Light Mode'}</span>
-                 </div>
-
-                 {/* MAINTENANCE (Cache) */}
+                 
+                 {/* MAINTENANCE */}
                  <div style={{ padding: '8px 10px', borderTop: '1px solid var(--header-border)', marginTop: '5px' }}>
                     <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#94a3b8', marginBottom: '4px' }}>MAINTENANCE</div>
                     <button 
@@ -101,7 +130,7 @@ const Sidebar = () => {
                     </button>
                  </div>
 
-                 {/* TEACH LUNA (Ingest) */}
+                 {/* TEACH LUNA */}
                  <div style={{ padding: '8px 10px', borderTop: '1px solid var(--header-border)' }}>
                     <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#94a3b8', marginBottom: '4px' }}>TEACH LUNA</div>
                     <div style={{ display: 'flex', gap: '5px' }}>
@@ -121,8 +150,23 @@ const Sidebar = () => {
         ) : (
           <button onClick={() => setView('chat')} className="header-btn">Back</button>
         )}
+        
+        {/* TITLE */}
         <span>LUNA</span>
-        <div style={{ width: '24px' }}></div>
+
+        {/* THEME TOGGLE */}
+        <button 
+          onClick={toggleTheme}
+          title="Toggle Theme"
+          className="icon-btn"
+          style={{ width: '28px', height: '28px', padding: '4px' }}
+        >
+          <img 
+             src={theme === 'light' ? iconSun : iconMoon} 
+             alt="Theme" 
+             style={{ width: '20px', height: '20px', opacity: 0.8 }} 
+          />
+        </button>
       </div>
       
       {/* CONTENT */}

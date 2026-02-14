@@ -46,4 +46,21 @@ export const api = {
     fetch(`${API_URL}/memory/source?source=${encodeURIComponent(source)}`, { 
       method: 'DELETE' 
     }),
+
+  chat: async (message: string, sessionId: number | null, useRag: boolean, image?: string | null) => {
+    const response = await fetch(`${API_URL}/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        message, 
+        session_id: sessionId, 
+        use_rag: useRag,
+        image: image 
+      })
+    });
+    
+    // Handle streaming response
+    if (!response.body) throw new Error("No response body");
+    return response.body.getReader();
+  },
 };

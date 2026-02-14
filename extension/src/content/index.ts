@@ -1,6 +1,9 @@
 import { extractPageContent, autoScroll } from './extractors/text-extractor';
+import { SnipperHandler } from './handlers/snipper-handler';
 
 console.log("Luna Content Script Ready");
+
+new SnipperHandler();
 
 chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
     if (request.action === "GET_PAGE_CONTENT") {

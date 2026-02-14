@@ -1,4 +1,5 @@
 import { useHistory } from '../../hooks/useHistory';
+import iconTrash from '../../../assets/icon_trash.png';
 
 interface Props {
   onSelectSession: (id: number) => void;
@@ -6,22 +7,25 @@ interface Props {
 }
 
 export const ConversationHistory = ({ onSelectSession, onNewChat }: Props) => {
-  const { sessions, loading, clearAllSessions } = useHistory();
+  // Destructure the new deleteSession function
+  const { sessions, loading, clearAllSessions, deleteSession } = useHistory();
 
-  const handleClear = async () => {
+  const handleClearAll = async () => {
     if (confirm("Are you sure you want to delete all chat history?")) {
       await clearAllSessions();
       onNewChat();
     }
   };
 
+  const handleDeleteOne = async (e: React.MouseEvent, id: number) => {
+    e.stopPropagation();
+    if (confirm("Delete this conversation?")) {
+      await deleteSession(id);
+    }
+  };
+
   return (
     <div className="app-container">
-      
-      {/* Header (managed by parent index.tsx usually, but if duplicated here:) */}
-      {/* Note: In your index.tsx you already have a header, so this component 
-          should strictly just be the list. If this header is redundant, 
-          you might see two headers. Assuming this is the content area: */}
       
       {/* The List Container */}
       <div className="history-content">
@@ -41,14 +45,40 @@ export const ConversationHistory = ({ onSelectSession, onNewChat }: Props) => {
               key={session.id}
               onClick={() => onSelectSession(session.id)}
               className="history-item"
+              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
             >
-              <div style={{ fontWeight: 600, marginBottom: '4px' }}>
-                {/* Clean Title */}
-                {session.title.replace(/Context: <details>.*<\/summary>/, "").substring(0, 40) || "Untitled Chat"}
+              {/* Left Side: Title & Date */}
+              <div style={{ overflow: 'hidden', flex: 1, paddingRight: '10px' }}>
+                <div style={{ fontWeight: 600, marginBottom: '4px' }}>
+                  {/* Clean Title Logic Preserved */}
+                  {session.title.replace(/Context: <details>.*<\/summary>/, "").substring(0, 40) || "Untitled Chat"}
+                </div>
+                <div style={{ fontSize: '11px', opacity: 0.6 }}>
+                  {new Date(session.created_at).toLocaleDateString()}
+                </div>
               </div>
-              <div style={{ fontSize: '11px', opacity: 0.6 }}>
-                {new Date(session.created_at).toLocaleDateString()}
-              </div>
+
+              {/* Trash Button */}
+              <button 
+                onClick={(e) => handleDeleteOne(e, session.id)}
+                title="Delete Chat"
+                style={{ 
+                  background: 'transparent', border: 'none', cursor: 'pointer', padding: '6px',
+                  opacity: 0.4, transition: 'all 0.2s', borderRadius: '4px',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}
+                onMouseEnter={(e) => {
+                   e.currentTarget.style.opacity = '1';
+                   e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.2)'; // Light Red Hover
+                }}
+                onMouseLeave={(e) => {
+                   e.currentTarget.style.opacity = '0.4';
+                   e.currentTarget.style.backgroundColor = 'transparent';
+                }}
+              >
+                <img src={iconTrash} alt="Delete" style={{ width: '14px', height: '14px' }} />
+              </button>
+
             </div>
           ))
         )}
@@ -57,8 +87,7 @@ export const ConversationHistory = ({ onSelectSession, onNewChat }: Props) => {
       {/* Footer Actions */}
       {sessions.length > 0 && (
         <div className="input-container" style={{ borderTop: 'none' }}> 
-          {/* We reuse input-container class for the glass effect at the bottom */}
-          <button onClick={handleClear} className="btn-danger">
+          <button onClick={handleClearAll} className="btn-danger">
             Delete All History
           </button>
         </div>

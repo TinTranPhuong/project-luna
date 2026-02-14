@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../../api';
 
+import iconFolder from '../../../assets/icon_folder.png';
+import iconTrash from '../../../assets/icon_trash.png';
+
 interface MemoryItem {
   id: string;
   text: string;
@@ -127,20 +130,36 @@ export const MemoryViewer = () => {
                 {/* FOLDER HEADER */}
                 <div className="folder-header" onClick={() => toggleFolder(source)}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden', flex: 1 }}>
-                    <span>{isExpanded ? '📂' : '📁'}</span>
+                    
+                    {/* FOLDER */}
+                    <img 
+                      src={iconFolder} 
+                      alt="Folder" 
+                      style={{ 
+                        width: '18px', height: '18px', opacity: 0.8 
+                      }} 
+                    />
+
                     <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '160px' }}>
                       {source}
                     </span>
                     <span className="folder-count">{items.length}</span>
                   </div>
 
+                  {/* TRASH */}
                   <button 
-                    className="action-btn btn-delete" 
+                    className="action-btn" 
                     onClick={(e) => handleDeleteFolder(e, source, items.length)}
                     title="Delete entire folder"
-                    style={{ fontSize: '12px', padding: '4px 8px' }}
+                    style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px' }}
                   >
-                    🗑️
+                    <img 
+                      src={iconTrash} 
+                      alt="Delete" 
+                      style={{ width: '14px', height: '14px', opacity: 0.6 }} 
+                      onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+                      onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'}
+                    />
                   </button>
                 </div>
 
@@ -171,9 +190,24 @@ export const MemoryViewer = () => {
                              
                              <div className="memory-meta">
                                <span>ID: {mem.id.slice(0, 6)}</span>
-                               <div>
+                               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                                  <button onClick={() => startEdit(mem)} className="action-btn btn-edit">Edit</button>
-                                 <button onClick={() => handleDelete(mem.id)} className="action-btn btn-delete">Delete</button>
+                                 
+                                 {/* TRASH */}
+                                 <button 
+                                   onClick={() => handleDelete(mem.id)} 
+                                   className="action-btn"
+                                   title="Delete Memory"
+                                   style={{ background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                                 >
+                                   <img 
+                                     src={iconTrash} 
+                                     alt="Delete" 
+                                     style={{ width: '12px', height: '12px', opacity: 0.6 }} 
+                                     onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+                                     onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'}
+                                   />
+                                 </button>
                                </div>
                              </div>
                           </div>

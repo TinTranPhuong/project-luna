@@ -21,6 +21,7 @@ class ChatRequest(BaseModel):
     message: str
     session_id: Optional[int] = None
     use_rag: Optional[bool] = True 
+    image: Optional[str] = None
 
 class ChatResponse(BaseModel):
     response: str
@@ -69,30 +70,56 @@ async def get_session_history(session_id: int, db: AsyncSession = Depends(get_db
     )
     return msgs_result.scalars().all()
 
+@router.delete("/sessions/{session_id}")
+async def delete_session(session_id: int, db: AsyncSession = Depends(get_db)):
+    # Check if session exists
+    result = await db.execute(select(ChatSession).where(ChatSession.id == session_id))
+    session = result.scalar_one_or_none()
+    
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    # Delete messages first (Cascade usually handles this, but manual is safer)
+    await db.execute(delete(ChatMessage).where(ChatMessage.session_id == session_id))
+    # Delete the session
+    await db.execute(delete(ChatSession).where(ChatSession.id == session_id))
+    
+    await db.commit()
+    return {"status": "success", "message": f"Session {session_id} deleted"}
+
+@router.delete("/sessions")
+async def clear_all_sessions(db: AsyncSession = Depends(get_db)):
+    """Delete all chat history."""
+    await db.execute(delete(ChatMessage)) 
+    await db.execute(delete(ChatSession))
+    await db.commit()
+    return {"status": "success", "message": "Memory wiped."}
+
 @router.post("") 
 async def chat_endpoint(request: ChatRequest, db: AsyncSession = Depends(get_db)):
     """Send a message and get a response."""
     
     # 1. Manage Session
+    session = None
     if request.session_id:
         result = await db.execute(select(ChatSession).where(ChatSession.id == request.session_id))
         session = result.scalar_one_or_none()
-        if not session:
-            raise HTTPException(status_code=404, detail="Session not found")
-    else:
-        # Create new chat
+    
+    # Create new session if needed
+    if not session:
         short_title = request.message[:30] + "..." if len(request.message) > 30 else request.message
         session = ChatSession(title=short_title)
         db.add(session)
         await db.commit()
         await db.refresh(session)
 
-    # 2. Save User Message to DB (Raw, without injected context)
+    # 2. Save User Message to DB (Text Only)
     user_msg = ChatMessage(session_id=session.id, role="user", content=request.message)
     db.add(user_msg)
     await db.commit()
 
-    # 3. Load History for Context
+    # 3. Load History
+    # We fetch the history we just saved so the context is complete
     history_result = await db.execute(
         select(ChatMessage)
         .where(ChatMessage.session_id == session.id)
@@ -103,66 +130,67 @@ async def chat_endpoint(request: ChatRequest, db: AsyncSession = Depends(get_db)
     # Convert to list of dicts
     chat_history = [{"role": msg.role, "content": msg.content} for msg in history_records]
 
-    # --- NEW: RAG Context Injection ---
-    # We inject the memory into the prompt sent to the AI, 
-    # but we DO NOT save this huge text block to the database.
+    # 4. Prepare Context & Vision
+    current_prompt_text = request.message
+
+    # RAG Context
     if request.use_rag:
         print(f"Searching memory for: '{request.message}'")
-        rag_results = retriever.search(request.message)
-        
-        if rag_results:
-            context_str = "\n\n--- RELEVANT MEMORY ---\n"
-            for i, doc in enumerate(rag_results):
-                # Add citation [Source 1], [Source 2]
-                context_str += f"[Source {i+1}]: {doc['text'].strip()}\n"
-            context_str += "-----------------------\n"
-            context_str += "INSTRUCTION: Answer the user's question using ONLY the context above. If unsure, say so.\n\n"
-            
-            # Modify the LAST message (current user prompt) in the temporary history list
-            if chat_history:
-                last_msg = chat_history[-1]
-                last_msg["content"] = context_str + "User Question: " + last_msg["content"]
+        try:
+            rag_results = retriever.search(request.message)
+            if rag_results:
+                context_str = "\n\n--- RELEVANT CONTEXT ---\n"
+                for i, doc in enumerate(rag_results):
+                    context_str += f"[{i+1}] {doc['text'].strip()}\n"
+                context_str += "------------------------\n"
+                
+                # Prepend context to the user's question in the prompt
+                current_prompt_text = context_str + "Question: " + current_prompt_text
+        except Exception as e:
+            print(f"RAG Error (continuing without context): {e}")
 
-    # 4. Stream the Response
+    # Vision Payload
+    if request.image:
+        print(f"Constructing Vision Payload...")
+        # Replace the last text message with the multimodal one
+        if chat_history and chat_history[-1]['role'] == 'user':
+             chat_history[-1] = {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": current_prompt_text},
+                    {"type": "image_url", "image_url": {"url": request.image}}
+                ]
+            }
+    else:
+        # Standard Text Mode: Update the last message with RAG context if needed
+        if chat_history and chat_history[-1]['role'] == 'user':
+            chat_history[-1]['content'] = current_prompt_text
+
+    # 5. Stream Response
     async def iter_response():
         full_response = ""
-        # Stream the chunks
-        async for chunk in llm_manager.stream_chat(chat_history):
-             full_response += chunk
-             yield chunk
         
-        # 5. Save AI Response to DB (After streaming finishes)
-        # We need a new session context here because the stream happens after the request finishes
-        # Ideally, we should handle this differently, but for now, we assume simple usage.
-        # Note: Saving async inside a generator can be tricky. 
-        # A common pattern is to save it after the loop if possible or use a background task.
-        
-        # --- FIX: Manually get a fresh DB session ---
+        try:
+            async for chunk in llm_manager.stream_chat(chat_history):
+                 full_response += chunk
+                 yield chunk
+        except Exception as e:
+            print(f"LLM Generation Error: {e}")
+            yield f"\n[Error generating response: {e}]"
+            return
+
+        # Save AI Response
         if full_response:
-            print(f"Saving AI response for Session {session.id}...")
-            # We iterate the get_db generator to get a new session
+            # New DB session for the background save
             async for db_new in get_db():
                 try:
                     ai_msg = ChatMessage(session_id=session.id, role="assistant", content=full_response)
                     db_new.add(ai_msg)
                     await db_new.commit()
                 except Exception as e:
-                    print(f"Failed to save history: {e}")
-                finally:
-                    break # We only need one session, then exit the loop
+                    print(f"Failed to save response: {e}")
+                break
 
-    # CREATE RESPONSE OBJECT
     response = StreamingResponse(iter_response(), media_type="text/event-stream")
-    
-    # ATTACH THE KEY 
     response.headers["X-Session-ID"] = str(session.id)
-    
     return response
-
-@router.delete("/sessions")
-async def clear_all_sessions(db: AsyncSession = Depends(get_db)):
-    """Delete all chat history."""
-    await db.execute(delete(ChatMessage)) 
-    await db.execute(delete(ChatSession))
-    await db.commit()
-    return {"status": "success", "message": "Memory wiped."}

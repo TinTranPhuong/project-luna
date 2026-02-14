@@ -16,20 +16,34 @@ export const useChat = (initialSessionId: number | null) => {
     }
   }, []);
 
-  // UPDATE: Added 'useRag' parameter
-  const sendMessage = useCallback(async (text: string, useRag: boolean, context?: string) => {
+  // Added 'image' as the 3rd argument
+  const sendMessage = useCallback(async (text: string, useRag: boolean, image?: string | null, context?: string) => {
+    
+    // 1. Prepare Visuals (What YOU see in the chat)
     let displayContent = text;
     let payloadMessage = text;
 
+    // Handle Page Context (if 'Read Page' was used)
     if (context) {
       const contextBlock = `Context:\n<details><summary>View Attached Page Content</summary>\n\n${context}\n\n</details>`;
       displayContent = `${contextBlock}\n\n${text}`;
       payloadMessage = `${contextBlock}\n\nQuestion: ${text}`;
     }
 
-    const userMsg: Message = { id: Date.now().toString(), role: 'user', content: displayContent };
+    // Handle Image (Visual Confirmation)
+    if (image) {
+      displayContent += "\n\n`[ Image Attached ]`";
+    }
+
+    // 2. Optimistic Update (Show user message immediately)
+    const userMsg: Message = { 
+        id: Date.now().toString(), 
+        role: 'user', 
+        content: displayContent 
+    };
+    
     const aiMsgId = (Date.now() + 1).toString();
-    const aiMsg: Message = { id: aiMsgId, role: 'assistant', content: "" };
+    const aiMsg: Message = { id: aiMsgId, role: 'assistant', content: "" }; // Placeholder
     
     setMessages((prev) => [...prev, userMsg, aiMsg]);
     setLoading(true);
@@ -37,13 +51,15 @@ export const useChat = (initialSessionId: number | null) => {
     abortControllerRef.current = new AbortController();
 
     try {
+      // 3. Construct Payload
       const payload: any = { 
         message: payloadMessage,
-        use_rag: useRag // <--- Sending the Toggle State to Backend
+        use_rag: useRag,
+        image: image || null // <--- SEND THE IMAGE TO BACKEND
       };
+      
       if (sessionId) payload.session_id = sessionId;
 
-      // UPDATE: Use 127.0.0.1 for reliability
       const response = await fetch('http://127.0.0.1:8000/api/v1/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -51,14 +67,15 @@ export const useChat = (initialSessionId: number | null) => {
         signal: abortControllerRef.current.signal
       });
 
+      // Session Locking
       const newSessionId = response.headers.get("x-session-id");
       if (newSessionId) {
-          console.log("Chat Locked to Session:", newSessionId);
           setSessionId(Number(newSessionId)); 
       }
 
       if (!response.body) throw new Error("No response body");
 
+      // 4. Handle Streaming Response
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let aiText = "";
@@ -68,6 +85,8 @@ export const useChat = (initialSessionId: number | null) => {
         if (done) break;
         const chunk = decoder.decode(value, { stream: true });
         aiText += chunk;
+        
+        // Update the AI message in real-time
         setMessages((prev) => 
           prev.map(msg => msg.id === aiMsgId ? { ...msg, content: aiText } : msg)
         );
@@ -78,7 +97,9 @@ export const useChat = (initialSessionId: number | null) => {
         console.log("Generation stopped");
       } else {
         console.error(error);
-        setMessages((prev) => [...prev, { id: Date.now().toString(), role: 'assistant', content: "⚠️ Error: Server connection failed." }]);
+        setMessages((prev) => 
+            prev.map(msg => msg.id === aiMsgId ? { ...msg, content: "Error: Connection failed." } : msg)
+        );
       }
     } finally {
       setLoading(false);
