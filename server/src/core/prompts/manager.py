@@ -1,42 +1,44 @@
 from typing import List, Dict, Any
-from .templates.system import CORE_SYSTEM_PROMPT
 from datetime import datetime
 from server.src.config.settings import MAX_HISTORY_MESSAGES
 
 class PromptManager:
     """
-    Constructs the conversation history with a Sliding Window.
+    Manages conversation history and injects dynamic context (like Time).
     """
     
     def __init__(self):
-        current_time = datetime.now().strftime("%A, %B %d, %Y at %I:%M %p")
-        
-        self.system_prompt = f"Current Date & Time: {current_time}\n\n{CORE_SYSTEM_PROMPT}"
+        pass
 
     def build_messages(self, chat_history: List[Dict[str, str]]) -> List[Dict[str, str]]:
-        """
-        Takes raw chat history, trims it to the limit, and prepends the System Prompt.
-        """
         final_messages = []
-        
-        # 1. ALWAYS Add the System Prompt first (The "Soul")
-        final_messages.append({
-            "role": "system", 
-            "content": self.system_prompt
-        })
-        
-        # 2. Apply the Sliding Window (The "Focus")
-        # Take only the last N messages
-        if len(chat_history) > MAX_HISTORY_MESSAGES:
-            # Slice the list: get the last MAX_HISTORY_MESSAGES items
-            recent_history = chat_history[-MAX_HISTORY_MESSAGES:]
-            
-            # (Optional) Debug print to see it working in console
-            print(f"Trimming context: Keeping last {len(recent_history)}/{len(chat_history)} messages")
-        else:
-            recent_history = chat_history
+        messages_to_process = list(chat_history)
 
-        # 3. Add the user's conversation
+        current_time = datetime.now().strftime("%A, %B %d, %Y at %I:%M %p")
+        time_block = f"Current Date: {current_time}"
+        system_message = None
+        
+        if messages_to_process and messages_to_process[0].get("role") == "system":
+            system_message = messages_to_process.pop(0)
+            
+            # INJECT THE TIME into the existing prompt
+            original_content = system_message["content"]
+            system_message["content"] = f"{time_block}\n\n{original_content}"
+            
+        else:
+            # If for some reason there is no system prompt, create one with just the time
+            system_message = {"role": "system", "content": time_block}
+
+        # 3. Apply Sliding Window (Trim old messages)
+        if len(messages_to_process) > MAX_HISTORY_MESSAGES:
+            recent_history = messages_to_process[-MAX_HISTORY_MESSAGES:]
+        else:
+            recent_history = messages_to_process
+
+        # 4. Rebuild the list
+        if system_message:
+            final_messages.append(system_message)
+        
         final_messages.extend(recent_history)
             
         return final_messages

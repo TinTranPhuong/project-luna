@@ -11,13 +11,11 @@ class ChatMessage(BaseModel):
     metadata: Optional[Dict[str, Any]] = Field(default_factory=dict)
 
 class ChatRequest(BaseModel):
-    messages: List[ChatMessage]
-    model: Optional[str] = Field(None, description="Specific model to use (e.g., 'llama3')")
-    stream: bool = Field(False, description="Whether to stream the response")
-    temperature: Optional[float] = Field(0.7, ge=0.0, le=2.0)
-    
-    # Context ID for linking to specific browser tabs or sessions
-    context_id: Optional[str] = None
+    message: str
+    session_id: Optional[int] = None
+    use_rag: bool = False
+    image: Optional[str] = None
+    mode: Optional[str] = "general"
 
 class ChatResponse(BaseModel):
     id: str

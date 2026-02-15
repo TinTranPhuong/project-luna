@@ -16,26 +16,30 @@ export const useChat = (initialSessionId: number | null) => {
     }
   }, []);
 
-  // Added 'image' as the 3rd argument
-  const sendMessage = useCallback(async (text: string, useRag: boolean, image?: string | null, context?: string) => {
+  // 🟢 UPDATE: Added 'mode' as the last argument
+  const sendMessage = useCallback(async (
+    text: string, 
+    useRag: boolean, 
+    image?: string | null, 
+    context?: string,
+    mode: string = 'general' // 👈 Default to general
+  ) => {
     
-    // 1. Prepare Visuals (What YOU see in the chat)
+    // 1. Prepare Visuals
     let displayContent = text;
     let payloadMessage = text;
 
-    // Handle Page Context (if 'Read Page' was used)
     if (context) {
       const contextBlock = `Context:\n<details><summary>View Attached Page Content</summary>\n\n${context}\n\n</details>`;
       displayContent = `${contextBlock}\n\n${text}`;
       payloadMessage = `${contextBlock}\n\nQuestion: ${text}`;
     }
 
-    // Handle Image (Visual Confirmation)
     if (image) {
       displayContent += "\n\n`[ Image Attached ]`";
     }
 
-    // 2. Optimistic Update (Show user message immediately)
+    // 2. Optimistic Update
     const userMsg: Message = { 
         id: Date.now().toString(), 
         role: 'user', 
@@ -43,7 +47,7 @@ export const useChat = (initialSessionId: number | null) => {
     };
     
     const aiMsgId = (Date.now() + 1).toString();
-    const aiMsg: Message = { id: aiMsgId, role: 'assistant', content: "" }; // Placeholder
+    const aiMsg: Message = { id: aiMsgId, role: 'assistant', content: "" }; 
     
     setMessages((prev) => [...prev, userMsg, aiMsg]);
     setLoading(true);
@@ -55,7 +59,8 @@ export const useChat = (initialSessionId: number | null) => {
       const payload: any = { 
         message: payloadMessage,
         use_rag: useRag,
-        image: image || null // <--- SEND THE IMAGE TO BACKEND
+        image: image || null,
+        mode: mode // 🟢 CRITICAL: Send the mode to the Backend!
       };
       
       if (sessionId) payload.session_id = sessionId;
@@ -67,7 +72,6 @@ export const useChat = (initialSessionId: number | null) => {
         signal: abortControllerRef.current.signal
       });
 
-      // Session Locking
       const newSessionId = response.headers.get("x-session-id");
       if (newSessionId) {
           setSessionId(Number(newSessionId)); 
@@ -75,7 +79,7 @@ export const useChat = (initialSessionId: number | null) => {
 
       if (!response.body) throw new Error("No response body");
 
-      // 4. Handle Streaming Response
+      // 4. Handle Streaming
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let aiText = "";
@@ -86,7 +90,6 @@ export const useChat = (initialSessionId: number | null) => {
         const chunk = decoder.decode(value, { stream: true });
         aiText += chunk;
         
-        // Update the AI message in real-time
         setMessages((prev) => 
           prev.map(msg => msg.id === aiMsgId ? { ...msg, content: aiText } : msg)
         );

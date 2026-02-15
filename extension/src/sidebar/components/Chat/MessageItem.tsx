@@ -110,10 +110,10 @@ export const MessageItem = ({ message }: Props) => {
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#48cae4', fontWeight: 600 }}>
               <img src={iconIdea} style={{ width: '20px' }} alt="Net" />
-              <span>Luna Suggests a Search</span>
+              <span>Luna suggests a Search</span>
             </div>
             <div style={{ fontSize: '13px', color: 'var(--text-primary)' }}>
-              "I will search: <b>{searchRequest}</b>"
+              "We need to search: <b>{searchRequest}</b> to get more information"
             </div>
             <button 
               onClick={() => handleGhostSearch(searchRequest!)}

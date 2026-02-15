@@ -12,6 +12,8 @@ from server.src.data.database.sqlite import get_db
 from server.src.data.database.models import ChatSession, ChatMessage
 from server.src.core.llm.manager import LLMManager
 from server.src.core.rag.retrieve import retriever
+# 🟢 Import the Registry to find Agents
+from server.src.agents.registry import get_agent
 
 router = APIRouter()
 llm_manager = LLMManager()
@@ -22,6 +24,7 @@ class ChatRequest(BaseModel):
     session_id: Optional[int] = None
     use_rag: Optional[bool] = True 
     image: Optional[str] = None
+    mode: Optional[str] = "general" # 👈 Add mode here too for the local schema
 
 class ChatResponse(BaseModel):
     response: str
@@ -119,7 +122,6 @@ async def chat_endpoint(request: ChatRequest, db: AsyncSession = Depends(get_db)
     await db.commit()
 
     # 3. Load History
-    # We fetch the history we just saved so the context is complete
     history_result = await db.execute(
         select(ChatMessage)
         .where(ChatMessage.session_id == session.id)
@@ -130,12 +132,14 @@ async def chat_endpoint(request: ChatRequest, db: AsyncSession = Depends(get_db)
     # Convert to list of dicts
     chat_history = [{"role": msg.role, "content": msg.content} for msg in history_records]
 
-    # 4. Prepare Context & Vision
+    # 4. Agent Selection & Context
+    agent_config = get_agent(request.mode)
+    print(f"Routing to Agent: {agent_config.name} (Model: {agent_config.model})")
+
     current_prompt_text = request.message
 
     # RAG Context
     if request.use_rag:
-        print(f"Searching memory for: '{request.message}'")
         try:
             rag_results = retriever.search(request.message)
             if rag_results:
@@ -143,8 +147,6 @@ async def chat_endpoint(request: ChatRequest, db: AsyncSession = Depends(get_db)
                 for i, doc in enumerate(rag_results):
                     context_str += f"[{i+1}] {doc['text'].strip()}\n"
                 context_str += "------------------------\n"
-                
-                # Prepend context to the user's question in the prompt
                 current_prompt_text = context_str + "Question: " + current_prompt_text
         except Exception as e:
             print(f"RAG Error (continuing without context): {e}")
@@ -152,7 +154,6 @@ async def chat_endpoint(request: ChatRequest, db: AsyncSession = Depends(get_db)
     # Vision Payload
     if request.image:
         print(f"Constructing Vision Payload...")
-        # Replace the last text message with the multimodal one
         if chat_history and chat_history[-1]['role'] == 'user':
              chat_history[-1] = {
                 "role": "user",
@@ -162,16 +163,17 @@ async def chat_endpoint(request: ChatRequest, db: AsyncSession = Depends(get_db)
                 ]
             }
     else:
-        # Standard Text Mode: Update the last message with RAG context if needed
+        # Standard Text Mode
         if chat_history and chat_history[-1]['role'] == 'user':
             chat_history[-1]['content'] = current_prompt_text
 
-    # 5. Stream Response
+    # 5. Stream Response (Passing Agent Config)
     async def iter_response():
         full_response = ""
         
         try:
-            async for chunk in llm_manager.stream_chat(chat_history):
+            #  Pass agent_config to manager
+            async for chunk in llm_manager.stream_chat(chat_history, agent_config=agent_config):
                  full_response += chunk
                  yield chunk
         except Exception as e:
@@ -181,7 +183,6 @@ async def chat_endpoint(request: ChatRequest, db: AsyncSession = Depends(get_db)
 
         # Save AI Response
         if full_response:
-            # New DB session for the background save
             async for db_new in get_db():
                 try:
                     ai_msg = ChatMessage(session_id=session.id, role="assistant", content=full_response)

@@ -3,6 +3,7 @@ import iconUpload from '../../../assets/icon_upload.png';
 import iconSend from '../../../assets/icon_send.png';
 import iconStop from '../../../assets/icon_stop.png';
 import iconScissors from '../../../assets/icon_scissors.png'; 
+import { ModelSelector, AgentMode } from './ModelSelector';
 
 interface Props {
   onSend: (text: string) => void;
@@ -10,9 +11,11 @@ interface Props {
   onSnip: () => void;
   onImageUpload: (base64Image: string) => void; 
   disabled?: boolean;
+  currentMode: AgentMode;            
+  onSelectMode: (mode: AgentMode) => void; 
 }
 
-export const InputBox = ({ onSend, onStop, onSnip, onImageUpload, disabled }: Props) => {
+export const InputBox = ({ onSend, onStop, onSnip, onImageUpload, onSelectMode, currentMode, disabled }: Props) => {
   const [text, setText] = useState('');
   
   // Ref for the hidden file input
@@ -97,6 +100,9 @@ export const InputBox = ({ onSend, onStop, onSnip, onImageUpload, disabled }: Pr
           style={{ flex: 1 }} 
         />
         
+        {/* MODEL SELECTOR */}
+        <ModelSelector currentMode={currentMode} onSelect={onSelectMode} />
+
         {/* RIGHT ACTION BUTTON */}
         {disabled ? (
           <button

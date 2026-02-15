@@ -19,8 +19,8 @@ export const MessageList = ({ messages, loading }: Props) => {
       {/* Empty State / Welcome Message */}
       {messages.length === 0 && !loading && (
         <div style={{ textAlign: 'center', marginTop: '40px', color: '#888' }}>
-          <h3>Luna AI</h3>
-          <p>Ready to assist. Attach a page or start typing.</p>
+          <h3> Luna is here!   (づ￣ ³￣)づ </h3>
+          <p> Ready to assist. Upload a file or start typing. </p>
         </div>
       )}
 

@@ -105,7 +105,7 @@ export const MemoryViewer = () => {
             className="memory-input"
             value={newNote}
             onChange={(e) => setNewNote(e.target.value)}
-            placeholder="Write a fact for Luna to remember..."
+            placeholder="Write a fact for Kyuna to remember..."
             rows={3}
           />
           <div style={{ marginTop: '8px', display: 'flex', justifyContent: 'flex-end' }}>

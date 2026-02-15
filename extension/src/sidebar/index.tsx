@@ -5,6 +5,7 @@ import { ConversationHistory } from './components/History/ConversationHistory';
 import { useTheme } from './hooks/useTheme';
 import { api } from './api';
 import { MemoryViewer } from './components/History/MemoryViewer';
+import { AgentMode } from './components/Chat/ModelSelector';
 import './styles/sidebar.css';
 
 import iconMenu from '../assets/icon_menu.png';
@@ -15,6 +16,7 @@ const Sidebar = () => {
   const [view, setView] = useState<'chat' | 'history' | 'memory'>('chat');
   const [currentSessionId, setCurrentSessionId] = useState<number | null>(null);
   const [showMenu, setShowMenu] = useState(false);
+  const [mode, setMode] = useState<AgentMode>('general');
   const [ingestUrl, setIngestUrl] = useState('');
   const [statusMsg, setStatusMsg] = useState(''); 
   const [uiScale, setUiScale] = useState(1);
@@ -23,12 +25,12 @@ const Sidebar = () => {
   // --- ZOOM ACTIONS ---
   const handleZoomIn = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setUiScale(prev => Math.min(prev + 0.1, 1.5)); // Max 150%
+    setUiScale(prev => Math.min(prev + 0.1, 2.0)); 
   };
 
   const handleZoomOut = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setUiScale(prev => Math.max(prev - 0.1, 0.6)); // Min 60%
+    setUiScale(prev => Math.max(prev - 0.1, 0.1)); 
   };
 
   const handleZoomReset = (e: React.MouseEvent) => {
@@ -143,7 +145,6 @@ const Sidebar = () => {
                     </div>
                     {statusMsg && <div style={{ fontSize: '10px', color: '#22c55e', marginTop: '4px', textAlign: 'center' }}>{statusMsg}</div>}
                  </div>
-
                </div>
              )}
           </div>
@@ -175,7 +176,12 @@ const Sidebar = () => {
       ) : view === 'memory' ? (
         <MemoryViewer /> 
       ) : (
-        <ChatInterface sessionId={currentSessionId} onSessionCreated={handleSessionCreated} />
+        <ChatInterface 
+          sessionId={currentSessionId} 
+          onSessionCreated={handleSessionCreated} 
+          currentMode={mode} 
+          onSelectMode={setMode}
+        />
       )}
     </div>
   );
