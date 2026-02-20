@@ -5,8 +5,6 @@ import rehypeKatex from 'rehype-katex';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import 'katex/dist/katex.min.css'; 
-
-// Import Icon for the Search Card
 import iconIdea from '../../../assets/icon_idea.png'; 
 
 export interface Message {
@@ -17,9 +15,10 @@ export interface Message {
 
 interface Props {
   message: Message;
+  onExecuteGen?: (prompt: string) => void;
 }
 
-export const MessageItem = ({ message }: Props) => {
+export const MessageItem = ({ message, onExecuteGen }: Props) => {
   const isUser = message.role === 'user';
 
   // --- HANDLER: Open Ghost Tab ---
@@ -61,7 +60,7 @@ export const MessageItem = ({ message }: Props) => {
     return content;
   };
 
-  // --- HELPER: Assistant Message (with Ghost Detection) ---
+  // --- HELPER: Assistant Message (with Ghost & Image Detection) ---
   const renderAssistantMessage = (content: string) => {
     
     // 1. Detect <cmd_browser> TAG
@@ -71,10 +70,30 @@ export const MessageItem = ({ message }: Props) => {
 
     if (browserMatch) {
       searchRequest = browserMatch[1].trim();
-      finalAnswer = content.replace(browserMatch[0], "").trim(); 
+      finalAnswer = finalAnswer.replace(browserMatch[0], "").trim(); 
     }
 
-    // 2. Extract <think> block
+    // 2. Detect <cmd_image_approve> TAG
+    const approveMatch = /<cmd_image_approve>([\s\S]*?)<\/cmd_image_approve>/.exec(finalAnswer);
+    let promptToApprove: string | null = null;
+
+    if (approveMatch) {
+        promptToApprove = approveMatch[1].trim();
+        // Using global replace (/g) to destroy ALL accidental duplicate tags
+        finalAnswer = finalAnswer.replace(/<cmd_image_approve>([\s\S]*?)<\/cmd_image_approve>/g, "").trim();
+    }
+
+    // 3. Detect <cmd_image_track> TAG
+    const trackMatch = /<cmd_image_track>(.*?)<\/cmd_image_track>/.exec(finalAnswer);
+    let trackId: string | null = null;
+
+    if (trackMatch) {
+      trackId = trackMatch[1].trim();
+      // Using global replace (/g)
+      finalAnswer = finalAnswer.replace(/<cmd_image_track>(.*?)<\/cmd_image_track>/g, "").trim();
+    }
+
+    // 4. Extract <think> block
     const thinkMatch = /<think>([\s\S]*?)<\/think>/.exec(finalAnswer);
     let thoughtContent: string | null = null;
 
@@ -124,6 +143,65 @@ export const MessageItem = ({ message }: Props) => {
               }}
             >
               Approve
+            </button>
+          </div>
+        )}
+
+        {/* APPROVAL CARD */}
+        {promptToApprove && (
+          <div style={{ 
+            marginBottom: '15px', padding: '12px', 
+            borderRadius: '8px', background: 'rgba(57, 216, 240, 0.1)', 
+            border: '1px solid rgba(123, 219, 235, 0.3)',
+            display: 'flex', flexDirection: 'column', gap: '8px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#48cae4', fontWeight: 600 }}>
+              <img src={iconIdea} style={{ width: '20px' }} alt="Net" />
+              <span>Luna proposed an Image Generation</span>
+            </div>
+            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', fontStyle: 'italic', background: 'rgba(0,0,0,0.2)', padding: '8px', borderRadius:'4px' }}>
+              "{promptToApprove}"
+            </div>
+            <button 
+              onClick={() => onExecuteGen && onExecuteGen(promptToApprove!)}
+              style={{
+                background: '#48cae4', color: 'white', border: 'none',
+                padding: '8px 16px', borderRadius: '4px', cursor: 'pointer',
+                fontSize: '12px', fontWeight: 'bold', alignSelf: 'flex-start',
+                display: 'flex', alignItems: 'center', gap: '6px'
+              }}
+            >
+              <span>Approve</span>
+            </button>
+          </div>
+        )}
+
+        {/* LIVE TRACKER CARD */}
+        {trackId && (
+          <div style={{ 
+            marginBottom: '15px', padding: '12px', 
+            borderRadius: '8px', background: 'rgba(57, 216, 240, 0.1)', 
+            border: '1px solid rgba(123, 219, 235, 0.3)',
+            display: 'flex', flexDirection: 'column', gap: '8px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#48cae4', fontWeight: 600 }}>
+              <svg xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{animation: 'spin 2s linear infinite'}}>
+                <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+              </svg>
+              <span>Luna is processing your image</span>
+            </div>
+            <div style={{ fontSize: '13px', color: 'var(--text-primary)' }}>
+              "Generation initiated. Track progress in the decoder terminal."
+            </div>
+            <button 
+              onClick={() => window.open(chrome.runtime.getURL(`luna_image.html?track=${trackId}`), '_blank', 'width=820,height=600')}
+              style={{
+                background: '#48cae4', color: 'white', border: 'none',
+                padding: '6px 12px', borderRadius: '4px', cursor: 'pointer',
+                fontSize: '11px', fontWeight: 'bold', alignSelf: 'flex-start'
+              }}
+            >
+              Open Live Tracker
             </button>
           </div>
         )}

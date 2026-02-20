@@ -16,13 +16,70 @@ export const useChat = (initialSessionId: number | null) => {
     }
   }, []);
 
-  // 🟢 UPDATE: Added 'mode' as the last argument
+  // Triggers the backend execution command quietly without adding a user bubble
+  const executeGen = useCallback(async (prompt: string, mode: string = 'image_gen') => {
+    setLoading(true);
+    
+    // Create an empty AI message bubble to stream the response into
+    const aiMsgId = (Date.now() + 1).toString();
+    const aiMsg: Message = { id: aiMsgId, role: 'assistant', content: "" }; 
+    setMessages((prev) => [...prev, aiMsg]);
+    
+    abortControllerRef.current = new AbortController();
+
+    try {
+      const payload: any = { 
+        message: `/execute_image ${prompt}`, // Special command
+        use_rag: false,
+        mode: mode 
+      };
+      if (sessionId) payload.session_id = sessionId;
+
+      const response = await fetch('http://127.0.0.1:8000/api/v1/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: abortControllerRef.current.signal
+      });
+
+      const newSessionId = response.headers.get("x-session-id");
+      if (newSessionId) setSessionId(Number(newSessionId));
+
+      if (!response.body) throw new Error("No response body");
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let aiText = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        aiText += chunk;
+        
+        setMessages((prev) => 
+          prev.map(msg => msg.id === aiMsgId ? { ...msg, content: aiText } : msg)
+        );
+      }
+    } catch (error: any) {
+      if (error.name !== 'AbortError') {
+        setMessages((prev) => 
+            prev.map(msg => msg.id === aiMsgId ? { ...msg, content: "Error: Generation failed." } : msg)
+        );
+      }
+    } finally {
+      setLoading(false);
+      abortControllerRef.current = null;
+    }
+  }, [sessionId]);
+
+  // Added 'mode' as the last argument
   const sendMessage = useCallback(async (
     text: string, 
     useRag: boolean, 
     image?: string | null, 
     context?: string,
-    mode: string = 'general' // 👈 Default to general
+    mode: string = 'general' 
   ) => {
     
     // 1. Prepare Visuals
@@ -60,7 +117,7 @@ export const useChat = (initialSessionId: number | null) => {
         message: payloadMessage,
         use_rag: useRag,
         image: image || null,
-        mode: mode // 🟢 CRITICAL: Send the mode to the Backend!
+        mode: mode 
       };
       
       if (sessionId) payload.session_id = sessionId;
@@ -134,5 +191,5 @@ export const useChat = (initialSessionId: number | null) => {
     setMessages([]);
   }, []);
 
-  return { messages, loading, sessionId, loadSession, sendMessage, clearChat, stopGeneration };
+  return { messages, loading, sessionId, loadSession, sendMessage, clearChat, executeGen, stopGeneration };
 };

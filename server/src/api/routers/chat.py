@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from datetime import datetime
 import asyncio
 import os
+import re 
 from pathlib import Path
 
 # Imports
@@ -107,7 +108,17 @@ async def chat_endpoint(request: ChatRequest, db: AsyncSession = Depends(get_db)
     history_result = await db.execute(
         select(ChatMessage).where(ChatMessage.session_id == session.id).order_by(ChatMessage.created_at)
     )
-    chat_history = [{"role": msg.role, "content": msg.content} for msg in history_result.scalars().all()]
+    
+    # HISTORY SCRUBBER
+    # We strip all hidden tags from the history so the LLM never sees them or tries to mimic them!
+    chat_history = []
+    for msg in history_result.scalars().all():
+        clean_content = msg.content
+        if isinstance(clean_content, str):
+            clean_content = re.sub(r'<cmd_image_approve>.*?</cmd_image_approve>', '', clean_content, flags=re.DOTALL)
+            clean_content = re.sub(r'<cmd_image_track>.*?</cmd_image_track>', '', clean_content, flags=re.DOTALL)
+            clean_content = clean_content.strip()
+        chat_history.append({"role": msg.role, "content": clean_content})
 
     # 4. Agent Setup
     agent_config = get_agent(request.mode)
@@ -143,6 +154,55 @@ async def chat_endpoint(request: ChatRequest, db: AsyncSession = Depends(get_db)
     # 5. Stream Response
     async def iter_response():
         full_response = ""
+        
+        # HANDLE EXECUTION COMMAND 
+        if request.message.startswith("/execute_image"):
+            refined_prompt = request.message.replace("/execute_image", "").strip()
+            
+            yield "\n\n**Phase 1:** Unloading Brain (Freeing VRAM)...\n"
+            llm_manager.unload_model()
+            await asyncio.sleep(0.5) 
+
+            yield "**Phase 2:** Generating Image (Please Wait)...\n"
+            comfy_response = comfy_adapter.queue_prompt(refined_prompt)
+
+            if "error" in comfy_response:
+                yield f"**Error:** {comfy_response['error']}"
+                await llm_manager.initialize() 
+            else:
+                prompt_id = comfy_response.get("prompt_id")
+                yield f"\n\n<cmd_image_track>{prompt_id}</cmd_image_track>\n\n"
+
+                try:
+                    await comfy_adapter.wait_for_completion(prompt_id)
+                except Exception as e:
+                    print(f"Backend waiting error: {e}")
+
+                try:
+                    import urllib.request, json
+                    print("Forcing ComfyUI to empty VRAM cache...")
+                    payload = json.dumps({"unload_models": True, "free_memory": True}).encode("utf-8")
+                    req = urllib.request.Request(
+                        "[http://127.0.0.1:8188/free](http://127.0.0.1:8188/free)",
+                        data=payload,
+                        headers={"Content-Type": "application/json"},
+                    )
+                    urllib.request.urlopen(req)
+                    await asyncio.sleep(1.0) 
+                except Exception as e:
+                    print(f"Cleanup warning: {e}")
+
+                await llm_manager.initialize()
+                yield "**Ready:** Luna is back online."
+            
+            async for db_new in get_db():
+                ai_msg = ChatMessage(session_id=session.id, role="assistant", content=f"*(User Approved Generation)*\n\n<cmd_image_track>{prompt_id}</cmd_image_track>")
+                db_new.add(ai_msg)
+                await db_new.commit()
+                break
+            return 
+
+        # --- NORMAL LLM GENERATION ---
         try:
             async for chunk in llm_manager.stream_chat(chat_history, agent_config=agent_config):
                 full_response += chunk
@@ -151,49 +211,20 @@ async def chat_endpoint(request: ChatRequest, db: AsyncSession = Depends(get_db)
             yield f"\n[Error: {e}]"
             return
 
-        # --- FULL CYCLE HANDOFF PROTOCOL ---
+        # INITIAL PROMPT GENERATION
         if request.mode == "image_gen":
-            refined_prompt = full_response.strip()
-
-            # Phase 1: Unload LLM (thread stays alive, only Llama object is freed)
-            yield "\n\n**Phase 1:** Unloading Brain (Freeing VRAM)...\n"
-            llm_manager.unload_model()
-            await asyncio.sleep(0.5)  # let driver settle
-
-            # Phase 2: Send to ComfyUI
-            yield "**Phase 2:** Generating Image (Please Wait)...\n"
-            comfy_response = comfy_adapter.queue_prompt(refined_prompt)
-
-            if "error" in comfy_response:
-                yield f"**Error:** {comfy_response['error']}"
+            
+            match = re.search(r'```(?:[a-zA-Z]+\s*)?(.*?)```', full_response, re.DOTALL)
+            
+            if match:
+                refined_prompt = match.group(1).strip()
             else:
-                prompt_id = comfy_response.get("prompt_id")
-
-                # Phase 3: Wait for Completion
-                try:
-                    await comfy_adapter.wait_for_completion(prompt_id)
-                    yield "**Image Finished!**\n"
-                except Exception as e:
-                    yield f"**Note:** Could not confirm completion ({e}). Check ComfyUI.\n"
-
-                # Phase 4: Tell ComfyUI to release VRAM, then reload LLM
-                try:
-                    import urllib.request, json
-                    print("Forcing ComfyUI to empty VRAM cache...")
-                    payload = json.dumps({"unload_models": True, "free_memory": True}).encode("utf-8")
-                    req = urllib.request.Request(
-                        "http://127.0.0.1:8188/free",
-                        data=payload,
-                        headers={"Content-Type": "application/json"},
-                    )
-                    urllib.request.urlopen(req)
-                    await asyncio.sleep(1.0)  # give ComfyUI time to release
-                except Exception as e:
-                    print(f"Cleanup warning: {e}")
-
-                # Reload LLM onto the same persistent CUDA thread
-                await llm_manager.initialize()
-                yield "**Ready:** Luna is back online."
+                # Fallback: Strip any hallucinated tags before wrapping
+                clean_response = re.sub(r'<cmd_.*?>.*?</cmd_.*?>', '', full_response, flags=re.DOTALL).strip()
+                refined_prompt = clean_response 
+                
+            yield f"\n\n<cmd_image_approve>{refined_prompt}</cmd_image_approve>"
+            full_response += f"\n\n<cmd_image_approve>{refined_prompt}</cmd_image_approve>"
         # ----------------------------------------
 
         if full_response:

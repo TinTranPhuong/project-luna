@@ -15,7 +15,7 @@ export const ChatInterface = ({ sessionId, currentMode, onSelectMode }: Props) =
   const useRag = true; 
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   
-  const { messages, loading, sendMessage, loadSession, clearChat, stopGeneration } = useChat(sessionId);
+  const { messages, loading, sendMessage, loadSession, clearChat, stopGeneration, executeGen } = useChat(sessionId);
 
   useEffect(() => {
     if (sessionId) loadSession(sessionId);
@@ -65,7 +65,8 @@ export const ChatInterface = ({ sessionId, currentMode, onSelectMode }: Props) =
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div style={{ flex: 1, overflowY: 'auto', paddingTop: '60px' }}> 
-        <MessageList messages={messages} loading={loading} />
+        {/* FIXED: Passed the executeGen prop down */}
+        <MessageList messages={messages} loading={loading} onExecuteGen={executeGen} />
       </div>
 
       {capturedImage && (

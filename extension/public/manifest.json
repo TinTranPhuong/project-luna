@@ -28,7 +28,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["ghost.html", "ghost.js", "assets/*.png"],
+      "resources": ["ghost.html", "ghost.js", "luna_image.html", "luna_image.js", "assets/*.png"],
       "matches": ["<all_urls>"]
     }
   ],
