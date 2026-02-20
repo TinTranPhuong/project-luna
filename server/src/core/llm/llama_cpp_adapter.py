@@ -1,102 +1,217 @@
 from llama_cpp import Llama
 from llama_cpp.llama_chat_format import Qwen3VLChatHandler
-from typing import List, Dict, Any, AsyncGenerator
+from typing import List, Dict, Any, AsyncGenerator, Optional
 import os
 import asyncio
-from concurrent.futures import ThreadPoolExecutor
+import gc
+import queue
+import ctypes
+import concurrent.futures
 from server.src.config.settings import MMPROJ_PATH
 
+
+# ---------------------------------------------------------------------------
+# GLOBAL SINGLETON THREAD — never kill this. One thread = one CUDA context.
+# ---------------------------------------------------------------------------
+_LLAMA_EXECUTOR = concurrent.futures.ThreadPoolExecutor(
+    max_workers=1,
+    thread_name_prefix="llama_cuda_worker"
+)
+
+
+def _run_on_llama_thread(fn, *args, **kwargs):
+    return _LLAMA_EXECUTOR.submit(fn, *args, **kwargs)
+
+
+async def _run_on_llama_thread_async(fn, *args, **kwargs):
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(_LLAMA_EXECUTOR, lambda: fn(*args, **kwargs))
+
+
+def _windows_force_vram_release_on_cuda_thread():
+    """Must be called from the CUDA worker thread only."""
+    try:
+        nvcuda = ctypes.WinDLL("nvcuda.dll")
+        result = nvcuda.cuCtxSynchronize()
+        print(f"VRAM Flush: cuCtxSynchronize() {'OK' if result == 0 else f'returned {result}'}")
+    except Exception as e:
+        print(f"VRAM Flush: nvcuda.dll unavailable ({e})")
+
+    try:
+        handle = ctypes.windll.kernel32.GetCurrentProcess()
+        ctypes.windll.psapi.EmptyWorkingSet(handle)
+        print("VRAM Flush: EmptyWorkingSet OK")
+    except Exception as e:
+        print(f"VRAM Flush: EmptyWorkingSet failed ({e})")
+
+    gc.collect()
+    gc.collect()
+
+
+# ---------------------------------------------------------------------------
+# Adapter
+# ---------------------------------------------------------------------------
+
 class LlamaCppAdapter:
-    def __init__(self, model_path: str, n_ctx: int = 50000):
+    def __init__(self, model_path: str, n_ctx: int = 8192):
         self.model_path = model_path
-        self.n_ctx = n_ctx 
-        self.llm = None
-        self._executor = ThreadPoolExecutor(max_workers=1)
+        self.n_ctx = n_ctx
+        self.llm: Optional[Llama] = None
 
     async def initialize(self):
-        print(f"Adapter loading model from: {self.model_path}")
-        print(f"Context Window: {self.n_ctx} tokens (KV Cache: Q4_0)")
-        
+        if self.llm is not None:
+            print("Adapter: Model already loaded, skipping.")
+            return
+
+        print(f"Adapter: Loading model -> {self.model_path}")
         if not os.path.exists(self.model_path):
-            raise FileNotFoundError(f"Model file missing at: {self.model_path}")
+            raise FileNotFoundError(f"Model file missing: {self.model_path}")
 
-        loop = asyncio.get_event_loop()
-        await loop.run_in_executor(self._executor, self._load_model_sync)
-        print("Model Loaded Successfully.")
+        self.llm = await _run_on_llama_thread_async(
+            self._load_model_sync, self.model_path, self.n_ctx
+        )
+        print("Adapter: Model loaded successfully.")
 
-    def _load_model_sync(self):
+    @staticmethod
+    def _load_model_sync(model_path: str, n_ctx: int) -> Llama:
         chat_handler = None
-        
-        # Always check for Qwen Projector
-        is_qwen = "Qwen" in os.path.basename(self.model_path)
-        
+        is_qwen = "Qwen" in os.path.basename(model_path)
+
         if is_qwen and os.path.exists(MMPROJ_PATH):
-            print(f"Qwen Model Detected: Loading Vision Adapter...")
             try:
                 chat_handler = Qwen3VLChatHandler(clip_model_path=MMPROJ_PATH)
-                print("Qwen 3 Vision Handler Attached")
+                print("Adapter: Qwen VL chat handler loaded.")
             except Exception as e:
-                print(f"Failed to load Vision Handler: {e}")
+                print(f"Adapter: Chat handler failed ({e}), text-only mode.")
                 chat_handler = None
-        else:
-            print("Standard Text Model Detected")
 
+        return Llama(
+            model_path=model_path,
+            chat_handler=chat_handler,
+            n_ctx=n_ctx,
+            n_gpu_layers=-1,
+            verbose=False,
+            type_k=2,
+            type_v=2,
+            flash_attn=True,
+        )
+
+    def _close_sync(self):
+        """Must only be called via _LLAMA_EXECUTOR."""
+        if self.llm is None:
+            return
+
+        # Step 1: Free the vision encoder via ExitStack (the correct API).
+        # Qwen3VLChatHandler stores its mtmd_ctx inside an ExitStack.
+        # Calling _exit_stack.close() is exactly what llama_cpp does internally
+        # when the handler is cleaned up — we just do it explicitly first.
+        chat_handler = getattr(self.llm, "chat_handler", None)
+        if chat_handler is not None:
+            print("Adapter: Freeing vision encoder via ExitStack...")
+            exit_stack = getattr(chat_handler, "_exit_stack", None)
+            if exit_stack is not None:
+                try:
+                    exit_stack.close()  # frees mtmd_ctx / CLIP — the correct call
+                    print("Adapter: _exit_stack.close() OK — vision encoder freed.")
+                except Exception as e:
+                    print(f"Adapter: _exit_stack.close() failed ({e})")
+            else:
+                print("Adapter: No _exit_stack found on handler.")
+
+            # Detach handler so llm.close() doesn't try to double-free
+            try:
+                self.llm.chat_handler = None
+            except Exception:
+                pass
+
+        # Step 2: Close main model normally
         try:
-            self.llm = Llama(
-                model_path=self.model_path,
-                chat_handler=chat_handler,
-                n_ctx=self.n_ctx,    
-                n_gpu_layers=-1, 
-                verbose=False,      
-                type_k=2, 
-                type_v=2,            
-                flash_attn=True
-            )
+            self.llm.close()
+            print("Adapter: llm.close() complete.")
         except Exception as e:
-            print(f"CRITICAL: Failed to load model: {e}")
-            raise
+            print(f"Adapter: llm.close() warning: {e}")
+
+        del self.llm
+        self.llm = None
+        gc.collect()
+        gc.collect()
+
+        # Step 3: Force VRAM release on THIS thread (the CUDA context thread)
+        _windows_force_vram_release_on_cuda_thread()
+
+        print("Adapter: _close_sync complete.")
+
+    def close(self):
+        print("Adapter: Starting VRAM purge...")
+        if self.llm is not None:
+            future = _run_on_llama_thread(self._close_sync)
+            future.result(timeout=60)
+        print("Adapter: VRAM purge complete.")
+
+    def unload(self):
+        self.close()
 
     async def generate(self, messages: List[Dict[str, Any]], settings: Dict[str, Any]) -> str:
-        if not self.llm: await self.initialize()
+        if not self.llm:
+            await self.initialize()
         stop_tokens = ["<|im_end|>", "<|endoftext|>", "<|end|>"]
-        loop = asyncio.get_event_loop()
-        response = await loop.run_in_executor(
-            self._executor,
-            lambda: self.llm.create_chat_completion(
+        llm_ref = self.llm
+        response = await _run_on_llama_thread_async(
+            lambda: llm_ref.create_chat_completion(
                 messages=messages,
                 max_tokens=settings.get("max_tokens", 8192),
                 temperature=settings.get("temperature", 0.6),
                 stop=stop_tokens,
-                stream=False
+                stream=False,
             )
         )
         return response["choices"][0]["message"]["content"]
-    
+
     async def stream(self, messages: List[Dict[str, Any]], settings: Dict[str, Any]) -> AsyncGenerator[str, None]:
-        if not self.llm: await self.initialize()
-        
+        if not self.llm:
+            await self.initialize()
+
         stop_tokens = ["<|im_end|>", "<|endoftext|>", "<|end|>"]
-        print(f"Streaming started... Model: {os.path.basename(self.model_path)}")
+        token_queue: queue.Queue = queue.Queue()
+        _DONE = object()
 
-        stream = self.llm.create_chat_completion(
-            messages=messages,
-            max_tokens=settings.get("max_tokens", 8192),
-            temperature=settings.get("temperature", 0.6),
-            stop=stop_tokens, 
-            stream=True 
-        )
-        
-        # RAW PASS-THROUGH
-        for chunk in stream:
-            await asyncio.sleep(0) 
-            if isinstance(chunk, dict):
-                choices = chunk.get("choices", [])
-                if choices:
-                    delta = choices[0].get("delta", {})
-                    content = delta.get("content", "")
-                    if content:
-                        yield content
+        llm_ref = self.llm
+        max_tokens = settings.get("max_tokens", 8192)
+        temperature = settings.get("temperature", 0.6)
 
-    def __del__(self):
-        if hasattr(self, '_executor'):
-            self._executor.shutdown(wait=False)
+        def _inference():
+            try:
+                gen = llm_ref.create_chat_completion(
+                    messages=messages,
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                    stop=stop_tokens,
+                    stream=True,
+                )
+                for chunk in gen:
+                    if isinstance(chunk, dict):
+                        choices = chunk.get("choices", [])
+                        if choices:
+                            content = choices[0].get("delta", {}).get("content", "")
+                            if content:
+                                token_queue.put(content)
+                del gen
+                gc.collect()
+            except Exception as e:
+                token_queue.put(RuntimeError(f"Inference error: {e}"))
+            finally:
+                token_queue.put(_DONE)
+
+        _run_on_llama_thread(_inference)
+
+        while True:
+            try:
+                item = token_queue.get_nowait()
+            except queue.Empty:
+                await asyncio.sleep(0.005)
+                continue
+            if item is _DONE:
+                break
+            if isinstance(item, Exception):
+                raise item
+            yield item

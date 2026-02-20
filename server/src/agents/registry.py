@@ -9,7 +9,7 @@ AGENTS = {
         model="qwen",     
         temperature=0.6,
         system_prompt=load_agent_prompt("general.md"),
-        description="Qwen 3 VL (Chat & Vision)",
+        description="Chat & Vision",
         icon="zap"
     ),
     

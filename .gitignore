@@ -29,6 +29,7 @@ Thumbs.db
 # AI Models 
 *.gguf
 *.bin
+*.safetensors
 server/models/*
 !server/models/.gitkeep
 

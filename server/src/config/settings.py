@@ -24,7 +24,7 @@ MODEL_REGISTRY = {
     "qwen": QWEN_FILENAME,  # The only key we need
 }
 
-# Vision Projector (Only used for Qwen)
+# Vision Projector 
 MMPROJ_FILENAME = "mmproj-Qwen3VL-8B-Instruct-F16.gguf"
 MMPROJ_PATH = str(MODEL_DIR / MMPROJ_FILENAME)
 
@@ -60,4 +60,4 @@ def get_model_path(model_key: str = "default") -> str:
 
 # --- CONTEXT VARS ---
 MAX_HISTORY_MESSAGES = 10 
-MAX_CONTEXT_TOKENS = 50000
+MAX_CONTEXT_TOKENS = 40000
