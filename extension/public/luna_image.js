@@ -30,6 +30,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     // --- 1. Start Tracking ---
     typeLine(`> LINK ESTABLISHED. Tracking Job ID: ${trackId.substring(0, 8)}...`);
     typeLine("> Connecting to neural engine websocket...");
+    typeLine("> Websocket connected. Awaiting image generation...");
     progressUi.style.display = "block";
 
     const COMFY_URL = "127.0.0.1:8188";

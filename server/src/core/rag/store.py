@@ -1,7 +1,7 @@
 import chromadb
 from chromadb.config import Settings
 from datetime import datetime, timedelta
-from server.src.config.settings import CHROMA_PATH, PROMOTION_THRESHOLD, TEMP_RETENTION_DAYS # <--- Added TEMP_RETENTION_DAYS
+from server.src.config.settings import CHROMA_PATH, PROMOTION_THRESHOLD, TEMP_RETENTION_DAYS 
 import time
 
 class MemoryStore:

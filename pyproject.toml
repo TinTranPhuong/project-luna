@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ai-browser-server"
-version = "0.1.0"
+version = "1.2"
 description = "Local AI Server"
 authors = ["You <you@example.com>"]
 package-mode = false

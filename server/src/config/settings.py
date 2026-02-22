@@ -36,7 +36,7 @@ DEFAULT_K = 20
 RERANK_TOP_K = 3
 
 def get_model_path(model_key: str = "default") -> str:
-    # 1. Try to find the key in the registry (e.g., "vision" -> "Qwen...gguf")
+    # 1. Try to find the key in the registry
     filename = MODEL_REGISTRY.get(model_key)
     
     # 2. If not found, maybe the user passed the filename directly?
@@ -60,4 +60,4 @@ def get_model_path(model_key: str = "default") -> str:
 
 # --- CONTEXT VARS ---
 MAX_HISTORY_MESSAGES = 10 
-MAX_CONTEXT_TOKENS = 40000
+MAX_CONTEXT_TOKENS = 60000

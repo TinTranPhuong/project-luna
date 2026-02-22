@@ -1,10 +1,10 @@
 {
   "extensionName": {
-    "message": "Luna - Trợ lý AI Trình duyệt",
+    "message": "Luna",
     "description": "Name of the extension"
   },
   "extensionDescription": {
-    "message": "Người bạn đồng hành AI của bạn.",
+    "message": "Luna",
     "description": "Description of the extension"
   }
 }

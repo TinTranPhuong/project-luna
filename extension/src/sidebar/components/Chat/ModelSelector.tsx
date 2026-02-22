@@ -28,14 +28,14 @@ export const ModelSelector = ({ currentMode, onSelect }: Props) => {
     { 
       id: 'general', 
       label: 'General', 
-      desc: 'Qwen 3 VL', 
+      desc: 'Use for general question', 
       // Lightning Icon
       icon: <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" /> 
     },
     { 
       id: 'image_gen', 
       label: 'Image', 
-      desc: 'Qwen Image 2512', 
+      desc: 'Use for image creation', 
       // Image Icon
       icon: <path d="M20 2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM5 14l3.5-4.5 2.5 3.01L14.5 8l4.5 6H5z" /> 
     }

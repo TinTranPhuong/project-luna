@@ -76,6 +76,6 @@ class ComfyAdapter:
         try:
             handle = ctypes.windll.kernel32.GetCurrentProcess()
             ctypes.windll.psapi.EmptyWorkingSet(handle)
-            print("OS-Level RAM Trim Complete.")
+            print("RAM Trim Complete.")
         except Exception as e:
             print(f"RAM Trim failed: {e}")

@@ -44,7 +44,7 @@ export class ContentMessageHandler {
       });
     }
 
-    // 3. Fallback for unknown messages (Optional but good practice)
+    // 3. Fallback for unknown messages 
     else {
       sendResponse({ status: "Unknown Action" });
     }

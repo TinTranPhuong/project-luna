@@ -109,6 +109,9 @@ const Sidebar = () => {
                     </div>
                  </div>
 
+                 <div className="menu-item" onClick={handleNewChat}>
+                   <span>New Chat</span>
+                 </div>
                  <div className="menu-item" onClick={() => { setView('history'); setShowMenu(false); }}>
                    <span>History</span>
                  </div>
@@ -141,9 +144,9 @@ const Sidebar = () => {
                             placeholder="Paste URL..." 
                             style={{ flex: 1, fontSize: '11px', padding: '4px', borderRadius: '4px', border: '1px solid #cbd5e1' }}
                         />
-                        <button onClick={handleIngest} style={{ background: '#60a5fa', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', padding: '0 8px' }}>ADD</button>
+                        <button onClick={handleIngest} style={{ background: '#48cae4', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', padding: '0 8px' }}>ADD</button>
                     </div>
-                    {statusMsg && <div style={{ fontSize: '10px', color: '#22c55e', marginTop: '4px', textAlign: 'center' }}>{statusMsg}</div>}
+                    {statusMsg && <div style={{ fontSize: '10px', color: '#ff8fab', marginTop: '4px', textAlign: 'center' }}>{statusMsg}</div>}
                  </div>
                </div>
              )}

@@ -19,7 +19,7 @@
   },
   "4": {
     "inputs": {
-      "text": "masterpiece, best quality, ultra detailed, chibi anime girl, pink and blue long hair, straight bangs, pink eyes, saying no, no hand sign, small blush on cheeks, tiny fang, holding NO banner, soft lighting, smooth shading, high resolution, anime illustration style, sharp lineart\n",
+      "text": "masterpiece, best quality, ultra detailed\n",
       "clip": [
         "16",
         0
@@ -59,7 +59,7 @@
       "seed": 156680208700286,
       "steps": 20,
       "cfg": 7,
-      "sampler_name": "euler",
+      "sampler_name": "euler_ancestral",
       "scheduler": "normal",
       "denoise": 1,
       "model": [

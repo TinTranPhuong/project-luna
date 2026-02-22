@@ -20,11 +20,10 @@ AGENTS = {
         model="qwen",    
         temperature=0.9,         
         system_prompt=load_agent_prompt("image_gen.md"),
-        description="Art Prompt Architect",
+        description="Art Prompt",
         icon="image"
     )
 }
 
 def get_agent(slug: str) -> AgentConfig:
-    """Returns the requested agent or defaults to General."""
     return AGENTS.get(slug, AGENTS["general"])

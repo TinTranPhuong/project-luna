@@ -38,14 +38,14 @@ export const MessageList = ({ messages, loading, onExecuteGen }: Props) => {
       {loading && (
         <div style={{ 
           alignSelf: 'flex-start', 
-          backgroundColor: '#F2F2F7', 
+          backgroundColor: '#48cae4', 
           padding: '10px 16px', 
           borderRadius: '12px', 
-          color: '#8E8E93', 
+          color: '#ffffff', 
           fontSize: '12px',
           marginBottom: '10px'
         }}>
-          Generating response...
+          Luna is thinking...
         </div>
       )}
       

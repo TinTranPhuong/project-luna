@@ -159,11 +159,11 @@ async def chat_endpoint(request: ChatRequest, db: AsyncSession = Depends(get_db)
         if request.message.startswith("/execute_image"):
             refined_prompt = request.message.replace("/execute_image", "").strip()
             
-            yield "\n\n**Phase 1:** Unloading Brain (Freeing VRAM)...\n"
+            # yield "\n\n**Phase 1:** Unloading Brain (Freeing VRAM)...\n"
             llm_manager.unload_model()
             await asyncio.sleep(0.5) 
 
-            yield "**Phase 2:** Generating Image (Please Wait)...\n"
+            # yield "**Phase 2:** Generating Image (Please Wait)...\n"
             comfy_response = comfy_adapter.queue_prompt(refined_prompt)
 
             if "error" in comfy_response:
@@ -193,7 +193,7 @@ async def chat_endpoint(request: ChatRequest, db: AsyncSession = Depends(get_db)
                     print(f"Cleanup warning: {e}")
 
                 await llm_manager.initialize()
-                yield "**Ready:** Luna is back online."
+                yield "**Ready:** Generation successful."
             
             async for db_new in get_db():
                 ai_msg = ChatMessage(session_id=session.id, role="assistant", content=f"*(User Approved Generation)*\n\n<cmd_image_track>{prompt_id}</cmd_image_track>")

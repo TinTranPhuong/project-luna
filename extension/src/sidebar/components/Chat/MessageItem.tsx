@@ -132,7 +132,7 @@ export const MessageItem = ({ message, onExecuteGen }: Props) => {
               <span>Luna suggests a Search</span>
             </div>
             <div style={{ fontSize: '13px', color: 'var(--text-primary)' }}>
-              "We need to search: <b>{searchRequest}</b> to get more information"
+              "I need to search: <b>{searchRequest}</b>"
             </div>
             <button 
               onClick={() => handleGhostSearch(searchRequest!)}
@@ -201,7 +201,7 @@ export const MessageItem = ({ message, onExecuteGen }: Props) => {
                 fontSize: '11px', fontWeight: 'bold', alignSelf: 'flex-start'
               }}
             >
-              Open Live Tracker
+              Open Image Generator
             </button>
           </div>
         )}
