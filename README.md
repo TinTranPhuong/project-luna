@@ -1,6 +1,6 @@
 <div align="center">
 
-# Project Luna
+# LUNA
 
 **A local-first, memory-augmented AI assistant — fully private, fully yours.**
 
