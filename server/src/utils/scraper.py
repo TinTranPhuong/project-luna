@@ -30,7 +30,7 @@ def scrape_url(url: str) -> str:
         chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
         clean_text = '\n'.join(chunk for chunk in chunks if chunk)
         
-        return clean_text[:20000] # Limit size for safety
+        return clean_text[:20000] 
         
     except Exception as e:
         print(f"❌ Scraping Failed: {e}")

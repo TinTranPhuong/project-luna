@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 
-// Define the available modes
-export type AgentMode = 'general' | 'vision' | 'image_gen';
+/* --- TYPE DEFINITIONS --- */
+export type AgentMode = 'general' | 'vision' | 'image_gen' | 'creative';
 
 interface Props {
   currentMode: AgentMode;
@@ -12,7 +12,7 @@ export const ModelSelector = ({ currentMode, onSelect }: Props) => {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Close when clicking outside
+  /* --- OUTSIDE CLICK LISTENER --- */
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -23,20 +23,24 @@ export const ModelSelector = ({ currentMode, onSelect }: Props) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Configuration for the menu items
+  /* --- MENU CONFIGURATION --- */
   const options = [
     { 
       id: 'general', 
       label: 'General', 
       desc: 'Use for general question', 
-      // Lightning Icon
       icon: <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" /> 
+    },
+    { 
+      id: 'creative', 
+      label: 'Creative', 
+      desc: 'Use for creative writting', 
+      icon: <path d="M22 11v1a10 10 0 1 1-9-10 10 10 0 0 1 9 10zM12 2a10 10 0 0 0-10 10h20a10 10 0 0 0-10-10z" /> 
     },
     { 
       id: 'image_gen', 
       label: 'Image', 
       desc: 'Use for image creation', 
-      // Image Icon
       icon: <path d="M20 2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM5 14l3.5-4.5 2.5 3.01L14.5 8l4.5 6H5z" /> 
     }
   ];
@@ -46,14 +50,14 @@ export const ModelSelector = ({ currentMode, onSelect }: Props) => {
   return (
     <div ref={menuRef} style={{ position: 'relative', zIndex: 200 }}>
       
-      {/* 1. TRIGGER BUTTON (Styled like .header-btn) */}
+      {/* --- TRIGGER BUTTON --- */}
       <button 
         onClick={() => setIsOpen(!isOpen)}
         style={{
           display: 'flex', alignItems: 'center', gap: '6px',
           background: 'transparent',
           border: '1px solid transparent',
-          color: 'var(--text-secondary)', // Uses sidebar.css variable
+          color: 'var(--text-secondary)', 
           padding: '6px 10px', borderRadius: '8px', cursor: 'pointer',
           fontWeight: 600, fontSize: '13px', transition: 'all 0.2s'
         }}
@@ -73,7 +77,7 @@ export const ModelSelector = ({ currentMode, onSelect }: Props) => {
         <span style={{ fontSize: '10px', opacity: 0.5 }}>▼</span>
       </button>
 
-      {/* 2. DROPDOWN MENU (Uses .settings-menu style vars) */}
+      {/* --- DROPDOWN MENU --- */}
       {isOpen && (
         <div style={{
           position: 'absolute', 
@@ -98,7 +102,6 @@ export const ModelSelector = ({ currentMode, onSelect }: Props) => {
                 style={{
                   display: 'flex', alignItems: 'center', gap: '10px',
                   padding: '10px', borderRadius: '8px', cursor: 'pointer',
-                  // Highlight background if selected
                   background: isSelected ? 'rgba(56, 189, 248, 0.1)' : 'transparent',
                   transition: 'background 0.2s'
                 }}
@@ -109,7 +112,8 @@ export const ModelSelector = ({ currentMode, onSelect }: Props) => {
                     if(!isSelected) e.currentTarget.style.background = 'transparent';
                 }}
               >
-                {/* Icon Circle */}
+                
+                {/* ICON RENDERER */}
                 <div style={{ 
                   color: isSelected ? '#38bdf8' : 'var(--text-secondary)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center'
@@ -119,7 +123,7 @@ export const ModelSelector = ({ currentMode, onSelect }: Props) => {
                   </svg>
                 </div>
 
-                {/* Text Info */}
+                {/* TEXT METADATA */}
                 <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
                   <span style={{ 
                       color: 'var(--text-primary)', 
@@ -135,7 +139,7 @@ export const ModelSelector = ({ currentMode, onSelect }: Props) => {
                   </span>
                 </div>
 
-                {/* Checkmark */}
+                {/* SELECTION INDICATOR */}
                 {isSelected && (
                   <div style={{ color: '#38bdf8', fontSize: '14px', fontWeight: 'bold' }}>✓</div>
                 )}

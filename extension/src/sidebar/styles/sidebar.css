@@ -1,54 +1,56 @@
-/* --- THEME VARIABLES --- */
+/* ==========================================================================
+   LUNA APPLICATION STYLESHEET
+   ========================================================================== */
+
+/* --- LIGHT THEME (DEFAULT) --- */
 :root {
-    /* --- SOFT NEON MODE (Based on your Circle Image) --- */
-    --bg-app: #f8fbff; /* Very soft white/blue tint */
+    /* Base Application Backgrounds */
+    --bg-app: #f8fbff; 
     --bg-gradient: linear-gradient(180deg, #f8fbff 0%, #eff6ff 100%);
     
-    /* HEADER: Clean & Solid */
+    /* Header & Navigation */
     --header-bg: #ffffff;
     --header-border: 1px solid #e0f2fe; 
     
-    /* TEXT: The "Pink" from the circle's left side */
-    --text-primary: #ff8fab;   /* Soft Pastel Pink */
-    --text-secondary: #64748b; /* Slate Grey */
+    /* Typography Colors */
+    --text-primary: #ff8fab;   
+    --text-secondary: #64748b; 
     --text-inverse: #ffffff;
     
-    /* BUBBLES: Gradient from Pink -> Blue (Like the circle) */
+    /* Chat Bubble Elements */
     --bubble-user: linear-gradient(135deg, #ff8fab 0%, #4cc9f0 100%); 
     --bubble-ai: #ffffff;
     --bubble-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); 
     --bubble-border-user: 1px solid transparent;
     --bubble-border-ai: 1px solid #e0f2fe;
     
-    /* INPUTS */
+    /* Input Fields & Focus Rings */
     --input-bg: #ffffff;
-    --input-border: 1px solid #bae6fd; /* Light Blue Border */
-    --input-focus-ring: 0 0 0 3px rgba(255, 143, 171, 0.2); /* Soft Pink Glow */
+    --input-border: 1px solid #bae6fd; 
+    --input-focus-ring: 0 0 0 3px rgba(255, 143, 171, 0.2); 
     
-    /* EXTRAS */
+    /* Code Blocks & Scrollbars */
     --code-bg: #1e293b; 
     --code-inline-bg: #f0f9ff;
     --scrollbar-thumb: #cbd5e1;
     
-    /* BUTTONS: The "Blue" from the circle's right side */
-    --btn-primary-bg: #4cc9f0; /* Sky Blue */
+    /* Primary Action Buttons */
+    --btn-primary-bg: #4cc9f0; 
     --btn-primary-shadow: 0 4px 6px -1px rgba(76, 201, 240, 0.4);
 }
 
+/* --- DARK THEME OVERRIDES --- */
 [data-theme='dark'] {
-    /* DARK MODE (Deep Ocean Blue - Like the image bottom) */
-    --bg-app: #102a43; /* Deep Navy Blue */
+    --bg-app: #102a43; 
     --bg-gradient: radial-gradient(circle at top right, #1e3a8a, #102a43 70%);
     
     --header-bg: rgba(16, 42, 67, 0.95);
     --header-border: 1px solid #243b53;
     
-    /* Text pops with the lighter Pink */
     --text-primary: #ffb3c1; 
     --text-secondary: #9fb3c8;
     --text-inverse: #ffffff;
     
-    /* Bubble Gradient remains Pink -> Blue but slightly richer */
     --bubble-user: linear-gradient(135deg, #ff8fab, #48cae4);
     --bubble-ai: #102a43;
     --bubble-shadow: 0 4px 10px rgba(0,0,0,0.3);
@@ -64,7 +66,10 @@
     --scrollbar-thumb: #334e68;
 }
 
-/* --- RESET & LAYOUT (Unchanged) --- */
+/* ==========================================================================
+   GLOBAL LAYOUT & RESET
+   ========================================================================== */
+
 body {
     margin: 0;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -81,20 +86,21 @@ body {
     background-image: var(--bg-gradient);
 }
 
-/* --- HEADER --- */
+/* ==========================================================================
+   HEADER COMPONENT
+   ========================================================================== */
+
 .header {
     position: absolute;  
     top: 0;             
     left: 0;            
     width: 100%;         
     box-sizing: border-box; 
-
     height: 60px;
     padding: 0 20px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    
     background: var(--header-bg);
     border-bottom: var(--header-border);
     z-index: 50;
@@ -124,23 +130,23 @@ body {
     background: rgba(0,0,0,0.03);
 }
 
-/* --- SCROLL CONTENT --- */
+/* ==========================================================================
+   MAIN CONTENT AREAS
+   ========================================================================== */
+
 .chat-content, .history-content {
     flex: 1;
     overflow-y: auto;
-    
     padding-top: 80px;
-    
     padding-left: 20px;
     padding-right: 20px;
     padding-bottom: 20px;
-    
     display: flex;
     flex-direction: column;
     gap: 16px;
 }
 
-/* --- MESSAGES --- */
+/* --- MESSAGE RENDERING --- */
 .message-row {
     display: flex;
     width: 100%;
@@ -179,7 +185,10 @@ body {
     border-bottom-left-radius: 4px;
 }
 
-/* --- INPUT --- */
+/* ==========================================================================
+   INPUTS & CONTROLS
+   ========================================================================== */
+
 .input-container {
     flex-shrink: 0;
     padding: 20px;
@@ -205,11 +214,11 @@ body {
 }
 
 .chat-input:focus {
-    border-color: #ff8fab; /* Pink Border Focus */
+    border-color: #ff8fab; 
     box-shadow: var(--input-focus-ring);
 }
 
-/* --- BUTTONS --- */
+/* --- PRIMARY BUTTONS --- */
 .btn-primary {
     background: var(--btn-primary-bg);
     color: white;
@@ -224,7 +233,7 @@ body {
 
 .btn-primary:active { transform: scale(0.96); }
 
-/* --- DANGER BUTTON --- */
+/* --- DANGER BUTTONS --- */
 .btn-danger {
     width: 100%;
     padding: 12px;
@@ -239,40 +248,8 @@ body {
     font-size: 12px;
     letter-spacing: 0.5px;
 }
+
 .btn-danger:hover { filter: brightness(1.1); }
-
-/* --- HISTORY ITEMS --- */
-.history-item {
-    padding: 14px;
-    margin-bottom: 8px;
-    border-radius: 12px;
-    background: var(--bubble-ai);
-    border: var(--bubble-border-ai);
-    color: var(--text-primary);
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.history-item:hover {
-    border-color: #ff8fab; /* Pink Border on Hover */
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-}
-
-.history-empty {
-    text-align: center;
-    padding: 40px;
-    color: var(--text-secondary);
-    font-style: italic;
-}
-
-/* --- SCROLLBARS --- */
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-thumb { 
-    background: var(--scrollbar-thumb); 
-    border-radius: 3px; 
-}
-::-webkit-scrollbar-track { background: transparent; }
 
 /* --- ICON BUTTONS --- */
 .icon-btn {
@@ -289,7 +266,7 @@ body {
 }
 
 [data-theme='dark'] .icon-btn {
-     background-color: rgba(76, 201, 240, 0.1); /* Slight Blue Tint */
+     background-color: rgba(76, 201, 240, 0.1); 
 }
 
 .icon-btn:hover {
@@ -313,18 +290,46 @@ body {
 .send-btn {
     margin-left: 4px;
 }
+
 .send-btn:hover {
     background-color: transparent; 
     filter: drop-shadow(0 0 2px var(--text-primary)); 
 }
 
-/* --- ATTACHMENT BADGE --- */
+/* ==========================================================================
+   HISTORY & BADGES
+   ========================================================================== */
+
+.history-item {
+    padding: 14px;
+    margin-bottom: 8px;
+    border-radius: 12px;
+    background: var(--bubble-ai);
+    border: var(--bubble-border-ai);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.history-item:hover {
+    border-color: #ff8fab; 
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.history-empty {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
 .attachment-badge {
     margin-bottom: 8px;
     display: flex;
     align-items: center;
     font-size: 12px;
-    background-color: #4cc9f0; /* Sky Blue Badge */
+    background-color: #4cc9f0; 
     color: white;
     padding: 4px 10px;
     border-radius: 12px;
@@ -340,7 +345,10 @@ body {
     font-weight: bold;
 }
 
-/* --- SETTINGS MENU --- */
+/* ==========================================================================
+   OVERLAYS & MENUS
+   ========================================================================== */
+
 .settings-menu {
     position: absolute;
     top: 40px; 
@@ -374,6 +382,7 @@ body {
 [data-theme='dark'] .menu-item:hover {
     background-color: rgba(255,255,255,0.1);
 }
+
 [data-theme='dark'] .icon-btn:hover {
     background-color: rgba(255,255,255,0.1);
 }
@@ -383,7 +392,21 @@ body {
     100% { transform: rotate(360deg); }
 }
 
-/* --- MEMORY VIEWER --- */
+/* ==========================================================================
+   SCROLLBAR UTILITIES
+   ========================================================================== */
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-thumb { 
+    background: var(--scrollbar-thumb); 
+    border-radius: 3px; 
+}
+::-webkit-scrollbar-track { background: transparent; }
+
+/* ==========================================================================
+   MEMORY VIEWER COMPONENT
+   ========================================================================== */
+
 .memory-container {
     flex: 1;
     overflow-y: auto;
@@ -412,7 +435,7 @@ body {
     letter-spacing: 0.5px;
 }
 
-/* ADD NOTE FORM */
+/* --- ADD NOTE FORM --- */
 .memory-add-form {
     background: var(--bubble-ai);
     border: var(--bubble-border-ai);
@@ -434,7 +457,7 @@ body {
     font-size: 13px;
     resize: vertical;
     outline: none;
-    box-sizing: border-box; /* Important for padding */
+    box-sizing: border-box; 
 }
 
 .memory-input:focus {
@@ -442,7 +465,7 @@ body {
     border-color: #ff8fab;
 }
 
-/* FOLDER SYSTEM */
+/* --- FOLDER SYSTEM --- */
 .memory-folder {
     background: var(--bubble-ai);
     border: var(--bubble-border-ai);
@@ -477,7 +500,7 @@ body {
     font-weight: 700;
 }
 
-/* MEMORY CHUNKS */
+/* --- MEMORY CHUNKS --- */
 .folder-content {
     padding: 0 12px 12px 12px;
     display: flex;
@@ -488,7 +511,6 @@ body {
 .memory-card {
     padding: 10px;
     border-radius: 8px;
-    /* Subtle contrast against the bubble background */
     background: rgba(128, 128, 128, 0.05); 
     border: 1px solid transparent;
     transition: all 0.2s;
@@ -522,7 +544,7 @@ body {
     opacity: 0.7;
 }
 
-/* ACTION BUTTONS */
+/* --- ACTION BUTTONS --- */
 .action-btn {
     background: none;
     border: none;
@@ -533,6 +555,28 @@ body {
     font-weight: 600;
     margin-left: 4px;
     transition: color 0.2s;
+}
+
+.trash-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 6px;
+    opacity: 0.5;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.trash-btn:hover {
+    opacity: 1;
+    background-color: rgba(239, 68, 68, 0.15); 
+}
+
+.trash-btn:active {
+    transform: scale(0.95); 
 }
 
 .btn-edit { color: #3b82f6; }

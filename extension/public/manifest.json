@@ -1,9 +1,10 @@
 {
   "manifest_version": 3,
   "name": "Luna",
-  "version": "1.2",
-  "default_locale": "en",
+  "version": "1.4",
   "description": "Your Luna Assistant companion powered by kyuna.",
+  "default_locale": "en",
+
   "permissions": [
     "sidePanel",
     "storage",
@@ -15,10 +16,12 @@
     "http://localhost:8000/*",
     "<all_urls>"
   ],
+
   "background": {
     "service_worker": "background.js",
     "type": "module"
   },
+
   "action": {
     "default_title": "Open Luna Settings",
     "default_popup": "popup.html"
@@ -26,9 +29,16 @@
   "side_panel": {
     "default_path": "sidebar.html"
   },
+
   "web_accessible_resources": [
     {
-      "resources": ["ghost.html", "ghost.js", "luna_image.html", "luna_image.js", "assets/*.png"],
+      "resources": [
+        "ghost.html", 
+        "ghost.js", 
+        "luna_image.html", 
+        "luna_image.js", 
+        "assets/*.png"
+      ],
       "matches": ["<all_urls>"]
     }
   ],

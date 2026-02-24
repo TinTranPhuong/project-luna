@@ -7,29 +7,21 @@ import gc
 import queue
 import ctypes
 import concurrent.futures
-from server.src.config.settings import MMPROJ_PATH
+from server.src.config.settings import MMPROJ_PATH, MAX_CONTEXT_TOKENS
 
-
-# ---------------------------------------------------------------------------
-# GLOBAL SINGLETON THREAD — never kill this. One thread = one CUDA context.
-# ---------------------------------------------------------------------------
 _LLAMA_EXECUTOR = concurrent.futures.ThreadPoolExecutor(
     max_workers=1,
     thread_name_prefix="llama_cuda_worker"
 )
 
-
 def _run_on_llama_thread(fn, *args, **kwargs):
     return _LLAMA_EXECUTOR.submit(fn, *args, **kwargs)
-
 
 async def _run_on_llama_thread_async(fn, *args, **kwargs):
     loop = asyncio.get_event_loop()
     return await loop.run_in_executor(_LLAMA_EXECUTOR, lambda: fn(*args, **kwargs))
 
-
 def _windows_force_vram_release_on_cuda_thread():
-    """Must be called from the CUDA worker thread only."""
     try:
         nvcuda = ctypes.WinDLL("nvcuda.dll")
         result = nvcuda.cuCtxSynchronize()
@@ -47,13 +39,8 @@ def _windows_force_vram_release_on_cuda_thread():
     gc.collect()
     gc.collect()
 
-
-# ---------------------------------------------------------------------------
-# Adapter
-# ---------------------------------------------------------------------------
-
 class LlamaCppAdapter:
-    def __init__(self, model_path: str, n_ctx: int = 8192):
+    def __init__(self, model_path: str, n_ctx: int = MAX_CONTEXT_TOKENS):
         self.model_path = model_path
         self.n_ctx = n_ctx
         self.llm: Optional[Llama] = None
@@ -91,40 +78,33 @@ class LlamaCppAdapter:
             n_ctx=n_ctx,
             n_gpu_layers=-1,
             verbose=False,
-            type_k=2,
-            type_v=2,
+            #type_k=8,
+            #type_v=8,
             flash_attn=True,
         )
 
     def _close_sync(self):
-        """Must only be called via _LLAMA_EXECUTOR."""
         if self.llm is None:
             return
 
-        # Step 1: Free the vision encoder via ExitStack (the correct API).
-        # Qwen3VLChatHandler stores its mtmd_ctx inside an ExitStack.
-        # Calling _exit_stack.close() is exactly what llama_cpp does internally
-        # when the handler is cleaned up — we just do it explicitly first.
         chat_handler = getattr(self.llm, "chat_handler", None)
         if chat_handler is not None:
             print("Adapter: Freeing vision encoder via ExitStack...")
             exit_stack = getattr(chat_handler, "_exit_stack", None)
             if exit_stack is not None:
                 try:
-                    exit_stack.close()  # frees mtmd_ctx / CLIP — the correct call
+                    exit_stack.close()  
                     print("Adapter: _exit_stack.close() OK — vision encoder freed.")
                 except Exception as e:
                     print(f"Adapter: _exit_stack.close() failed ({e})")
             else:
                 print("Adapter: No _exit_stack found on handler.")
 
-            # Detach handler so llm.close() doesn't try to double-free
             try:
                 self.llm.chat_handler = None
             except Exception:
                 pass
 
-        # Step 2: Close main model normally
         try:
             self.llm.close()
             print("Adapter: llm.close() complete.")
@@ -136,9 +116,7 @@ class LlamaCppAdapter:
         gc.collect()
         gc.collect()
 
-        # Step 3: Force VRAM release on THIS thread (the CUDA context thread)
         _windows_force_vram_release_on_cuda_thread()
-
         print("Adapter: _close_sync complete.")
 
     def close(self):
@@ -154,13 +132,19 @@ class LlamaCppAdapter:
     async def generate(self, messages: List[Dict[str, Any]], settings: Dict[str, Any]) -> str:
         if not self.llm:
             await self.initialize()
-        stop_tokens = ["<|im_end|>", "<|endoftext|>", "<|end|>"]
+            
+        stop_tokens = ["<|im_end|>", "<|endoftext|>"]
         llm_ref = self.llm
         response = await _run_on_llama_thread_async(
             lambda: llm_ref.create_chat_completion(
                 messages=messages,
-                max_tokens=settings.get("max_tokens", 8192),
+                max_tokens=settings.get("max_tokens", MAX_CONTEXT_TOKENS),
                 temperature=settings.get("temperature", 0.6),
+                # 🟢 DYNAMIC SAMPLERS
+                top_k=settings.get("top_k", 40),
+                top_p=settings.get("top_p", 0.95),
+                min_p=settings.get("min_p", 0.05),
+                repeat_penalty=settings.get("repeat_penalty", 1.1),
                 stop=stop_tokens,
                 stream=False,
             )
@@ -171,12 +155,12 @@ class LlamaCppAdapter:
         if not self.llm:
             await self.initialize()
 
-        stop_tokens = ["<|im_end|>", "<|endoftext|>", "<|end|>"]
+        stop_tokens = ["<|im_end|>", "<|endoftext|>"]
         token_queue: queue.Queue = queue.Queue()
         _DONE = object()
 
         llm_ref = self.llm
-        max_tokens = settings.get("max_tokens", 8192)
+        max_tokens = settings.get("max_tokens", MAX_CONTEXT_TOKENS)
         temperature = settings.get("temperature", 0.6)
 
         def _inference():
@@ -185,6 +169,10 @@ class LlamaCppAdapter:
                     messages=messages,
                     max_tokens=max_tokens,
                     temperature=temperature,
+                    top_k=settings.get("top_k", 40),
+                    top_p=settings.get("top_p", 0.95),
+                    min_p=settings.get("min_p", 0.05),
+                    repeat_penalty=settings.get("repeat_penalty", 1.1),
                     stop=stop_tokens,
                     stream=True,
                 )

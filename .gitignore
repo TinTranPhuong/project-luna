@@ -35,6 +35,5 @@ server/models/*
 
 # DB
 *luna.db
-*0.3.18
 rag_data/
 scripts/

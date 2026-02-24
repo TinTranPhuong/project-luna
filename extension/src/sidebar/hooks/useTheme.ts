@@ -1,21 +1,23 @@
 import { useState, useEffect } from 'react';
 
 export const useTheme = () => {
-  // Check local storage or system preference
+  /* --- INITIALIZATION UTILITIES --- */
   const getInitialTheme = () => {
     const saved = localStorage.getItem('theme');
     if (saved) return saved;
     return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   };
 
+  /* --- STATE --- */
   const [theme, setTheme] = useState(getInitialTheme);
 
+  /* --- LIFECYCLE EFFECTS --- */
   useEffect(() => {
-    // Apply the theme to the <body> tag
     document.body.setAttribute('data-theme', theme);
     localStorage.setItem('theme', theme);
   }, [theme]);
 
+  /* --- ACTIONS --- */
   const toggleTheme = () => {
     setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
   };

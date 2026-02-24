@@ -3,6 +3,7 @@
 <head>
     <title>Luna Visual Decoder</title>
     <style>
+        /* --- THEME & COLOR PALETTE --- */
         :root {
             --bg-color: #0f172a;
             --term-bg: rgba(15, 23, 42, 0.95);
@@ -11,9 +12,11 @@
             --text-secondary: #ff8fab;
         }
 
+        /* --- GLOBAL LAYOUT --- */
         body {
             background-color: var(--bg-color);
-            margin: 0; height: 100vh;
+            margin: 0; 
+            height: 100vh;
             display: flex; 
             align-items: center; 
             justify-content: center;
@@ -25,9 +28,10 @@
             background-size: 40px 40px;
         }
 
+        /* --- MAIN TERMINAL WINDOW --- */
         .window {
             width: 800px; 
-            max-height: 90vh; /* Prevents the window from going off-screen */
+            max-height: 90vh; 
             background: var(--term-bg);
             border: 1px solid var(--border);
             border-radius: 12px;
@@ -43,11 +47,20 @@
             display: flex; 
             align-items: center;
             border-bottom: 1px solid var(--border);
-            flex-shrink: 0; /* Keeps the header pinned at the top */
+            flex-shrink: 0; 
         }
 
-        .controls { display: flex; gap: 8px; margin-right: 15px; }
-        .dot { width: 10px; height: 10px; border-radius: 50%; }
+        .controls { 
+            display: flex; 
+            gap: 8px; 
+            margin-right: 15px; 
+        }
+        
+        .dot { 
+            width: 10px; 
+            height: 10px; 
+            border-radius: 50%; 
+        }
         .red { background: #ef4444; } 
         .yellow { background: #eab308; } 
         .green { background: #22c55e; }
@@ -60,75 +73,114 @@
             text-transform: uppercase;
         }
 
+        /* --- CONTENT AREA & SCROLLBAR --- */
         .content-area {
             display: flex; 
             flex-direction: column;
             padding: 30px; 
             gap: 20px; 
-            overflow-y: auto; /* Adds a scrollbar if the text/image gets too long */
+            overflow-y: auto; 
         }
 
-        /* Custom Cyberpunk Scrollbar */
         .content-area::-webkit-scrollbar { width: 8px; }
         .content-area::-webkit-scrollbar-track { background: transparent; }
-        .content-area::-webkit-scrollbar-thumb { background: rgba(56, 189, 248, 0.15); border-radius: 4px; }
+        .content-area::-webkit-scrollbar-thumb { 
+            background: rgba(56, 189, 248, 0.15); 
+            border-radius: 4px; 
+        }
 
-        .terminal-text { color: var(--text-primary); font-size: 14px; line-height: 1.6; }
+        /* --- TYPOGRAPHY & CURSOR --- */
+        .terminal-text { 
+            color: var(--text-primary); 
+            font-size: 14px; 
+            line-height: 1.6; 
+        }
         
         .cursor {
-            display: inline-block; width: 8px; height: 16px;
+            display: inline-block; 
+            width: 8px; 
+            height: 16px;
             background: var(--text-primary);
-            animation: blink 1s step-end infinite; vertical-align: middle; margin-left: 4px;
+            animation: blink 1s step-end infinite; 
+            vertical-align: middle; 
+            margin-left: 4px;
         }
 
-        /* PROGRESS BAR STYLES */
+        /* --- PROGRESS UI --- */
         .progress-container {
-            margin-top: 10px; margin-bottom: 10px; display: none;
+            margin-top: 10px; 
+            margin-bottom: 10px; 
+            display: none;
         }
+        
         .progress-label {
-            display: flex; justify-content: space-between;
-            font-size: 11px; color: var(--text-primary); margin-bottom: 5px;
+            display: flex; 
+            justify-content: space-between;
+            font-size: 11px; 
+            color: var(--text-primary); 
+            margin-bottom: 5px;
         }
+        
         .progress-bar-bg {
-            width: 100%; height: 6px; background: rgba(255, 143, 171, 0.2);
-            border-radius: 3px; overflow: hidden;
+            width: 100%; 
+            height: 6px; 
+            background: rgba(255, 143, 171, 0.2);
+            border-radius: 3px; 
+            overflow: hidden;
         }
+        
         .progress-bar-fill {
-            height: 100%; width: 0%; background: var(--text-primary);
-            border-radius: 3px; transition: width 0.3s ease;
+            height: 100%; 
+            width: 0%; 
+            background: var(--text-primary);
+            border-radius: 3px; 
+            transition: width 0.3s ease;
             box-shadow: 0 0 10px rgba(255, 143, 171, 0.5);
         }
 
-        /* SMART IMAGE SCALING */
+        /* --- IMAGE & BUTTON ELEMENTS --- */
         #generated-image {
             display: none; 
             width: 100%; 
-            max-height: 600px; /* Constrains the image vertically */
-            object-fit: contain; /* Keeps the aspect ratio perfect */
+            max-height: 600px; 
+            object-fit: contain; 
             border-radius: 8px;
             border: 1px solid var(--border); 
             box-shadow: 0 0 20px rgba(255, 143, 171, 0.1);
         }
 
         #download-btn {
-            display: none; align-self: center;
-            background: var(--text-primary); color: #0f172a;
-            border: none; padding: 10px 24px; border-radius: 6px;
-            font-weight: bold; font-family: 'Courier New', Courier, monospace;
-            cursor: pointer; transition: transform 0.1s;
-            margin-top: 10px; margin-bottom: 10px;
+            display: none; 
+            align-self: center;
+            background: var(--text-primary); 
+            color: #0f172a;
+            border: none; 
+            padding: 10px 24px; 
+            border-radius: 6px;
+            font-weight: bold; 
+            font-family: 'Courier New', Courier, monospace;
+            cursor: pointer; 
+            transition: transform 0.1s;
+            margin-top: 10px; 
+            margin-bottom: 10px;
         }
+        
         #download-btn:hover { background: #ffb3c6; }
         #download-btn:active { transform: scale(0.95); }
 
-        @keyframes blink { 50% { opacity: 0; } }
+        /* --- KEYFRAMES --- */
+        @keyframes blink { 
+            50% { opacity: 0; } 
+        }
     </style>
 </head>
 <body>
     <div class="window">
         <div class="window-header">
             <div class="controls">
-                <div class="dot red"></div><div class="dot yellow"></div><div class="dot green"></div>
+                <div class="dot red"></div>
+                <div class="dot yellow"></div>
+                <div class="dot green"></div>
             </div>
             <div class="title"> LUNA IS DRAWING ... </div>
         </div>
@@ -149,7 +201,7 @@
             </div>
             
             <img id="generated-image" alt="Decoded Visual">
-            <button id="download-btn">DOWNLOAD IMGAGE</button>
+            <button id="download-btn">DOWNLOAD IMAGE</button>
         </div>
     </div>
     <script src="luna_image.js"></script>

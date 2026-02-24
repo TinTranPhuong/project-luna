@@ -1,13 +1,16 @@
 import { useState, useCallback, useRef } from 'react';
 import { Message } from '../components/Chat/MessageItem';
+import { API_BASE_URL } from '../api'; 
 
 export const useChat = (initialSessionId: number | null) => {
+  /* --- STATE & REFS --- */
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [sessionId, setSessionId] = useState<number | null>(initialSessionId);
   
   const abortControllerRef = useRef<AbortController | null>(null);
 
+  /* --- ABORT HANDLERS --- */
   const stopGeneration = useCallback(() => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort(); 
@@ -16,11 +19,10 @@ export const useChat = (initialSessionId: number | null) => {
     }
   }, []);
 
-  // Triggers the backend execution command quietly without adding a user bubble
+  /* --- SILENT COMMAND EXECUTION (TOOLS/IMAGE GEN) --- */
   const executeGen = useCallback(async (prompt: string, mode: string = 'image_gen') => {
     setLoading(true);
     
-    // Create an empty AI message bubble to stream the response into
     const aiMsgId = (Date.now() + 1).toString();
     const aiMsg: Message = { id: aiMsgId, role: 'assistant', content: "" }; 
     setMessages((prev) => [...prev, aiMsg]);
@@ -29,13 +31,15 @@ export const useChat = (initialSessionId: number | null) => {
 
     try {
       const payload: any = { 
-        message: `/execute_image ${prompt}`, // Special command
+        message: `/execute_image ${prompt}`,
         use_rag: false,
         mode: mode 
       };
+      
       if (sessionId) payload.session_id = sessionId;
 
-      const response = await fetch('http://127.0.0.1:8000/api/v1/chat', {
+      // USE CENTRALIZED URL
+      const response = await fetch(`${API_BASE_URL}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -61,8 +65,10 @@ export const useChat = (initialSessionId: number | null) => {
           prev.map(msg => msg.id === aiMsgId ? { ...msg, content: aiText } : msg)
         );
       }
-    } catch (error: any) {
-      if (error.name !== 'AbortError') {
+    } catch (error: unknown) { 
+      //  SAFE ERROR NARROWING
+      const isAbortError = error instanceof Error && error.name === 'AbortError';
+      if (!isAbortError) {
         setMessages((prev) => 
             prev.map(msg => msg.id === aiMsgId ? { ...msg, content: "Error: Generation failed." } : msg)
         );
@@ -73,7 +79,7 @@ export const useChat = (initialSessionId: number | null) => {
     }
   }, [sessionId]);
 
-  // Added 'mode' as the last argument
+  /* --- STANDARD CHAT TRANSACTION --- */
   const sendMessage = useCallback(async (
     text: string, 
     useRag: boolean, 
@@ -82,7 +88,7 @@ export const useChat = (initialSessionId: number | null) => {
     mode: string = 'general' 
   ) => {
     
-    // 1. Prepare Visuals
+    /* --- CONTEXT & VISUAL PREPARATION --- */
     let displayContent = text;
     let payloadMessage = text;
 
@@ -96,7 +102,7 @@ export const useChat = (initialSessionId: number | null) => {
       displayContent += "\n\n`[ Image Attached ]`";
     }
 
-    // 2. Optimistic Update
+    /* --- OPTIMISTIC UI UPDATE --- */
     const userMsg: Message = { 
         id: Date.now().toString(), 
         role: 'user', 
@@ -112,7 +118,7 @@ export const useChat = (initialSessionId: number | null) => {
     abortControllerRef.current = new AbortController();
 
     try {
-      // 3. Construct Payload
+      /* --- API PAYLOAD CONSTRUCTION --- */
       const payload: any = { 
         message: payloadMessage,
         use_rag: useRag,
@@ -122,7 +128,8 @@ export const useChat = (initialSessionId: number | null) => {
       
       if (sessionId) payload.session_id = sessionId;
 
-      const response = await fetch('http://127.0.0.1:8000/api/v1/chat', {
+      // USE CENTRALIZED URL
+      const response = await fetch(`${API_BASE_URL}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -136,7 +143,7 @@ export const useChat = (initialSessionId: number | null) => {
 
       if (!response.body) throw new Error("No response body");
 
-      // 4. Handle Streaming
+      /* --- STREAM EXTRACTION & RENDERING --- */
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let aiText = "";
@@ -152,8 +159,10 @@ export const useChat = (initialSessionId: number | null) => {
         );
       }
 
-    } catch (error: any) {
-      if (error.name === 'AbortError') {
+    } catch (error: unknown) { 
+      // SAFE ERROR NARROWING
+      const isAbortError = error instanceof Error && error.name === 'AbortError';
+      if (isAbortError) {
         console.log("Generation stopped");
       } else {
         console.error(error);
@@ -167,11 +176,13 @@ export const useChat = (initialSessionId: number | null) => {
     }
   }, [sessionId]);
 
+  /* --- SESSION DATA MANAGEMENT --- */
   const loadSession = useCallback(async (id: number) => {
     setLoading(true);
     setSessionId(id);
     try {
-      const res = await fetch(`http://127.0.0.1:8000/api/v1/chat/history/${id}`);
+      // USE CENTRALIZED URL
+      const res = await fetch(`${API_BASE_URL}/chat/history/${id}`);
       const data = await res.json();
       const uiMessages = data.map((msg: any) => ({
         id: msg.id.toString(),

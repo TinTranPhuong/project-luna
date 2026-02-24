@@ -117,6 +117,9 @@ async def chat_endpoint(request: ChatRequest, db: AsyncSession = Depends(get_db)
         if isinstance(clean_content, str):
             clean_content = re.sub(r'<cmd_image_approve>.*?</cmd_image_approve>', '', clean_content, flags=re.DOTALL)
             clean_content = re.sub(r'<cmd_image_track>.*?</cmd_image_track>', '', clean_content, flags=re.DOTALL)
+            clean_content = re.sub(r'(?:<\|start\|>assistant)?<\|channel\|>analysis.*?<\|message\|>.*?(?:<\|start\|>assistant)?<\|channel\|>(?!analysis)[a-zA-Z0-9_]+<\|message\|>', '', clean_content, flags=re.DOTALL)
+            clean_content = re.sub(r'<\|end\|>', '', clean_content)
+            clean_content = re.sub(r'<\|im_start\|>assistant', '', clean_content)
             clean_content = clean_content.strip()
         chat_history.append({"role": msg.role, "content": clean_content})
 

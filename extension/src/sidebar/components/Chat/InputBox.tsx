@@ -17,36 +17,47 @@ interface Props {
 
 export const InputBox = ({ onSend, onStop, onSnip, onImageUpload, onSelectMode, currentMode, disabled }: Props) => {
   const [text, setText] = useState('');
-  
-  // Ref for the hidden file input
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  /* --- EVENT HANDLERS --- */
   const handleSend = () => {
     if (text.trim()) {
       onSend(text);
       setText('');
+      // Reset the textarea height after sending
+      if (textareaRef.current) {
+        textareaRef.current.style.height = 'auto';
+      }
     }
   };
 
-  const handleKeyDown = (e: KeyboardEvent) => {
+  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    // Send on Enter, but allow Shift+Enter for new lines!
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
     }
   };
 
-  // Handle File Selection
+  const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setText(e.target.value);
+    // Auto-resize logic: Calculate scroll height and set max height
+    e.target.style.height = 'auto'; 
+    e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`; // Caps at 120px tall
+  };
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        // Send the image data up to ChatInterface
         onImageUpload(reader.result as string);
       };
       reader.readAsDataURL(file);
     }
-    // Reset value so you can upload the same file again if you deleted it
+    
     e.target.value = "";
   };
 
@@ -62,14 +73,12 @@ export const InputBox = ({ onSend, onStop, onSnip, onImageUpload, onSelectMode, 
         onChange={handleFileUpload}
       />
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: '8px' }}>
         
-        {/* LEFT TOOLS GROUP */}
-        <div style={{ display: 'flex', gap: '4px' }}>
-          
-          {/* UPLOAD BUTTON  */}
+        {/* TOOLBAR: LEFT */}
+        <div style={{ display: 'flex', gap: '4px', paddingBottom: '8px' }}>
           <button
-            onClick={() => fileInputRef.current?.click()} // Triggers the hidden input
+            onClick={() => fileInputRef.current?.click()}
             disabled={disabled}
             className="icon-btn"
             title="Upload Image"
@@ -77,7 +86,6 @@ export const InputBox = ({ onSend, onStop, onSnip, onImageUpload, onSelectMode, 
             <img src={iconUpload} alt="Upload" style={{ width: '20px', height: '20px', opacity: 0.8 }} />
           </button>
 
-          {/* SNIP BUTTON  */}
           <button
             onClick={onSnip}
             disabled={disabled}
@@ -88,41 +96,53 @@ export const InputBox = ({ onSend, onStop, onSnip, onImageUpload, onSelectMode, 
           </button>
         </div>
 
-        {/* INPUT FIELD */}
-        <input
-          type="text"
+        {/* MULTI-LINE TEXTAREA */}
+        <textarea
+          ref={textareaRef}
           value={text}
-          onChange={(e) => setText(e.target.value)}
+          onChange={handleInput}
           onKeyDown={handleKeyDown}
-          placeholder={disabled ? "Luna is thinking..." : "Ask Luna..."}
+          placeholder={disabled ? "Luna is thinking..." : "Ask Luna"}
           disabled={disabled}
           className="chat-input" 
-          style={{ flex: 1 }} 
+          rows={1}
+          style={{ 
+            flex: 1, 
+            resize: 'none', 
+            overflowY: 'auto', 
+            minHeight: '20px',
+            fontFamily: 'inherit',
+            lineHeight: '1.4',
+            paddingTop: '12px'
+          }} 
         />
         
-        {/* MODEL SELECTOR */}
-        <ModelSelector currentMode={currentMode} onSelect={onSelectMode} />
+        {/* RIGHT CONTROLS WRAPPER (To keep them aligned to the bottom) */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingBottom: '4px' }}>
+          {/* MODEL SELECTOR */}
+          <ModelSelector currentMode={currentMode} onSelect={onSelectMode} />
 
-        {/* RIGHT ACTION BUTTON */}
-        {disabled ? (
-          <button
-            onClick={onStop}
-            className="icon-btn send-btn"
-            title="Stop"
-            style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)' }}
-          >
-            <img src={iconStop} alt="Stop" style={{ width: '20px', height: '20px' }} />
-          </button>
-        ) : (
-          <button
-            onClick={handleSend}
-            disabled={!text.trim()}
-            className="icon-btn send-btn"
-            title="Send"
-          >
-            <img src={iconSend} alt="Send" style={{ width: '20px', height: '20px' }} />
-          </button>
-        )}
+          {/* TOOLBAR: RIGHT */}
+          {disabled ? (
+            <button
+              onClick={onStop}
+              className="icon-btn send-btn"
+              title="Stop"
+              style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)' }}
+            >
+              <img src={iconStop} alt="Stop" style={{ width: '20px', height: '20px' }} />
+            </button>
+          ) : (
+            <button
+              onClick={handleSend}
+              disabled={!text.trim()}
+              className="icon-btn send-btn"
+              title="Send"
+            >
+              <img src={iconSend} alt="Send" style={{ width: '20px', height: '20px' }} />
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

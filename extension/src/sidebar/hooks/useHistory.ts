@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
+import { API_BASE_URL } from '../api'; 
 
+/* --- INTERFACES --- */
 export interface Session {
   id: number;
   title: string;
@@ -7,13 +9,16 @@ export interface Session {
 }
 
 export const useHistory = () => {
+  /* --- STATE --- */
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
 
+  /* --- API TRANSACTIONS --- */
   const fetchSessions = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:8000/api/v1/chat/sessions');
+      // USE DYNAMIC TEMPLATE STRINGS
+      const res = await fetch(`${API_BASE_URL}/chat/sessions`);
       const data = await res.json();
       setSessions(data);
     } catch (err) {
@@ -25,25 +30,23 @@ export const useHistory = () => {
 
   const clearAllSessions = useCallback(async () => {
     try {
-      await fetch('http://localhost:8000/api/v1/chat/sessions', { method: 'DELETE' });
+      await fetch(`${API_BASE_URL}/chat/sessions`, { method: 'DELETE' });
       setSessions([]);
     } catch (e) {
       console.error("Failed to wipe memory", e);
     }
   }, []);
 
-  // ➕ NEW: Delete Single Session
   const deleteSession = useCallback(async (id: number) => {
     try {
-      await fetch(`http://localhost:8000/api/v1/chat/sessions/${id}`, { method: 'DELETE' });
-      // Optimistic update (remove from list immediately)
+      await fetch(`${API_BASE_URL}/chat/sessions/${id}`, { method: 'DELETE' });
       setSessions(prev => prev.filter(s => s.id !== id));
     } catch (e) {
       console.error("Failed to delete session", e);
     }
   }, []);
 
-  // Initial load
+  /* --- LIFECYCLE --- */
   useEffect(() => {
     fetchSessions();
   }, [fetchSessions]);

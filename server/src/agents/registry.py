@@ -13,7 +13,22 @@ AGENTS = {
         icon="zap"
     ),
     
-    # AGENT 2: IMAGE GEN 
+    # AGENT 2: CREATIVE
+    "creative": AgentConfig(
+        name="Creative",
+        slug="creative",
+        model="gpt-oss",     
+        temperature=3,
+        top_k=40,              
+        top_p=0.95,            
+        min_p=0.05,           
+        repeat_penalty=1.1,
+        system_prompt=load_agent_prompt("creative.md"),
+        description="Creative",
+        icon="mask"
+    ),
+    
+    # AGENT 3: IMAGE GEN 
     "image_gen": AgentConfig(
         name="Image Gen",
         slug="image_gen",
@@ -22,8 +37,7 @@ AGENTS = {
         system_prompt=load_agent_prompt("image_gen.md"),
         description="Art Prompt",
         icon="image"
-    )
+    )   
 }
-
 def get_agent(slug: str) -> AgentConfig:
     return AGENTS.get(slug, AGENTS["general"])

@@ -4,6 +4,7 @@ import { api } from '../../api';
 import iconFolder from '../../../assets/icon_folder.png';
 import iconTrash from '../../../assets/icon_trash.png';
 
+/* --- INTERFACES & UTILITIES --- */
 interface MemoryItem {
   id: string;
   text: string;
@@ -21,28 +22,32 @@ const groupBySource = (items: MemoryItem[]) => {
 };
 
 export const MemoryViewer = () => {
+  /* --- STATE MANAGEMENT --- */
   const [memories, setMemories] = useState<MemoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedSources, setExpandedSources] = useState<Record<string, boolean>>({});
 
-  // State
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
   const [isAdding, setIsAdding] = useState(false);
   const [newNote, setNewNote] = useState("");
 
+  /* --- API TRANSACTIONS --- */
   const fetchBrain = async () => {
     setLoading(true);
     try {
       const data = await api.getMemories();
       setMemories(data);
-    } catch (e) { console.error(e); } 
-    finally { setLoading(false); }
+    } catch (e) { 
+      console.error(e); 
+    } finally { 
+      setLoading(false); 
+    }
   };
 
   useEffect(() => { fetchBrain(); }, []);
 
-  // --- ACTIONS ---
+  /* --- EVENT HANDLERS --- */
   const handleDelete = async (id: string) => {
     if(!confirm("Forget this memory forever?")) return;
     await api.deleteMemory(id);
@@ -50,7 +55,7 @@ export const MemoryViewer = () => {
   };
 
   const handleDeleteFolder = async (e: React.MouseEvent, source: string, count: number) => {
-    e.stopPropagation(); // Stop the folder from toggling open/closed
+    e.stopPropagation(); 
     if(!confirm(`WARNING: This will delete ALL ${count} memories from:\n\n${source}\n\nAre you sure?`)) return;
     
     await api.deleteSource(source);
@@ -80,13 +85,14 @@ export const MemoryViewer = () => {
     setExpandedSources(prev => ({ ...prev, [source]: !prev[source] }));
   };
 
+  /* --- RENDER PREPARATION --- */
   const groupedMemories = groupBySource(memories);
   const sources = Object.keys(groupedMemories);
 
   return (
     <div className="memory-container">
       
-      {/* HEADER */}
+      {/* --- COMPONENT HEADER --- */}
       <div className="memory-header">
         <h3>Memory Bank ({memories.length})</h3>
         <button 
@@ -98,7 +104,7 @@ export const MemoryViewer = () => {
         </button>
       </div>
 
-      {/* ADD NOTE FORM */}
+      {/* --- ADD NEW MEMORY FORM --- */}
       {isAdding && (
         <div className="memory-add-form">
           <textarea 
@@ -116,7 +122,7 @@ export const MemoryViewer = () => {
         </div>
       )}
 
-      {/* LIST */}
+      {/* --- MEMORY DIRECTORY --- */}
       {loading ? (
         <div className="history-empty">Scanning Neural Network...</div>
       ) : (
@@ -127,50 +133,36 @@ export const MemoryViewer = () => {
 
             return (
               <div key={source} className="memory-folder">
-                {/* FOLDER HEADER */}
+                
+                {/* --- FOLDER HEADER --- */}
                 <div className="folder-header" onClick={() => toggleFolder(source)}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden', flex: 1 }}>
-                    
-                    {/* FOLDER */}
-                    <img 
-                      src={iconFolder} 
-                      alt="Folder" 
-                      style={{ 
-                        width: '18px', height: '18px', opacity: 0.8 
-                      }} 
-                    />
-
+                    <img src={iconFolder} alt="Folder" style={{ width: '18px', height: '18px', opacity: 0.8 }} />
                     <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '160px' }}>
                       {source}
                     </span>
                     <span className="folder-count">{items.length}</span>
                   </div>
 
-                  {/* TRASH */}
+                  {/* CLEANED FOLDER TRASH BUTTON */}
                   <button 
-                    className="action-btn" 
+                    className="trash-btn" 
                     onClick={(e) => handleDeleteFolder(e, source, items.length)}
                     title="Delete entire folder"
-                    style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px' }}
                   >
-                    <img 
-                      src={iconTrash} 
-                      alt="Delete" 
-                      style={{ width: '14px', height: '14px', opacity: 0.6 }} 
-                      onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
-                      onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'}
-                    />
+                    <img src={iconTrash} alt="Delete" style={{ width: '14px', height: '14px' }} />
                   </button>
                 </div>
 
-                {/* FOLDER CONTENT */}
+                {/* --- FOLDER CONTENT (MEMORIES) --- */}
                 {isExpanded && (
                   <div className="folder-content">
                     {items.map((mem) => (
                       <div key={mem.id} className="memory-card">
                         
                         {editingId === mem.id ? (
-                          /* EDIT MODE */
+                          
+                          /* --- EDIT MODE --- */
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                             <textarea 
                               className="memory-input"
@@ -184,28 +176,25 @@ export const MemoryViewer = () => {
                             </div>
                           </div>
                         ) : (
-                          /* VIEW MODE */
+                          
+                          /* --- VIEW MODE --- */
                           <div>
-                             <div className="memory-text">{mem.text}</div>
-                             
+                             <div className="memory-text">{mem.text}</div>                           
                              <div className="memory-meta">
                                <span>ID: {mem.id.slice(0, 6)}</span>
                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                                  <button onClick={() => startEdit(mem)} className="action-btn btn-edit">Edit</button>
                                  
-                                 {/* TRASH */}
+                                 {/* CLEANED SINGLE MEMORY TRASH BUTTON */}
                                  <button 
+                                   className="trash-btn"
                                    onClick={() => handleDelete(mem.id)} 
-                                   className="action-btn"
                                    title="Delete Memory"
-                                   style={{ background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
                                  >
                                    <img 
                                      src={iconTrash} 
                                      alt="Delete" 
-                                     style={{ width: '12px', height: '12px', opacity: 0.6 }} 
-                                     onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
-                                     onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'}
+                                     style={{ width: '12px', height: '12px'}} 
                                    />
                                  </button>
                                </div>

@@ -18,10 +18,12 @@ os.makedirs(RAG_DATA_DIR, exist_ok=True)
 
 # --- MODEL REGISTRY ---
 QWEN_FILENAME = "Qwen3VL-8B-Instruct-Q8_0.gguf"
+GPT_OSS_FILENAME = "OpenAI-20B-NEOPlus-Uncensored-IQ4_NL.gguf"
 
 MODEL_REGISTRY = {
     "default": QWEN_FILENAME,
-    "qwen": QWEN_FILENAME,  # The only key we need
+    "gpt-oss": GPT_OSS_FILENAME,
+    "qwen": QWEN_FILENAME,     
 }
 
 # Vision Projector 
@@ -59,5 +61,5 @@ def get_model_path(model_key: str = "default") -> str:
     return str(model_path)
 
 # --- CONTEXT VARS ---
-MAX_HISTORY_MESSAGES = 10 
-MAX_CONTEXT_TOKENS = 60000
+MAX_HISTORY_MESSAGES = 8
+MAX_CONTEXT_TOKENS = 30000

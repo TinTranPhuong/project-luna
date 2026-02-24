@@ -13,6 +13,7 @@ import iconSun from '../assets/icon_sun.png';
 import iconMoon from '../assets/icon_moon.png';
 
 const Sidebar = () => {
+  /* --- STATE MANAGEMENT --- */
   const [view, setView] = useState<'chat' | 'history' | 'memory'>('chat');
   const [currentSessionId, setCurrentSessionId] = useState<number | null>(null);
   const [showMenu, setShowMenu] = useState(false);
@@ -20,9 +21,11 @@ const Sidebar = () => {
   const [ingestUrl, setIngestUrl] = useState('');
   const [statusMsg, setStatusMsg] = useState(''); 
   const [uiScale, setUiScale] = useState(1);
+  const [chatKey, setChatKey] = useState(Date.now());
+  
   const { theme, toggleTheme } = useTheme();
 
-  // --- ZOOM ACTIONS ---
+  /* --- ZOOM CONTROLS --- */
   const handleZoomIn = (e: React.MouseEvent) => {
     e.stopPropagation();
     setUiScale(prev => Math.min(prev + 0.1, 2.0)); 
@@ -38,15 +41,17 @@ const Sidebar = () => {
     setUiScale(1);
   };
 
-  // --- Handlers ---
+  /* --- NAVIGATION HANDLERS --- */
   const handleSelectSession = (id: number) => {
     setCurrentSessionId(id);
+    setChatKey(Date.now());
     setView('chat'); 
     setShowMenu(false);
   };
 
   const handleNewChat = () => {
     setCurrentSessionId(null); 
+    setChatKey(Date.now());
     setView('chat');
     setShowMenu(false);
   };
@@ -55,6 +60,7 @@ const Sidebar = () => {
     setCurrentSessionId(id);
   };
 
+  /* --- API TRANSACTIONS --- */
   const handleIngest = async () => {
     if(!ingestUrl) return;
     setStatusMsg('Reading...');
@@ -78,6 +84,8 @@ const Sidebar = () => {
         setStatusMsg('Error');
     }
   };
+
+  /* --- DYNAMIC STYLING --- */
   const appStyle: any = {
     zoom: uiScale,
     height: `${100 / uiScale}vh`, 
@@ -86,18 +94,24 @@ const Sidebar = () => {
 
   return (
     <div className="app-container" style={appStyle}>
-      {/* HEADER */}
+      
+      {/* ==========================================
+          GLOBAL HEADER 
+          ========================================== */}
       <div className="header">
         {view === 'chat' ? (
           <div style={{ position: 'relative' }}>
-             {/* Menu Button */}
+             
+             {/* --- MENU TOGGLE --- */}
              <button onClick={() => setShowMenu(!showMenu)} className="icon-btn">
                <img src={iconMenu} alt="Menu" style={{ width: '24px', height: '24px' }} />
              </button>
 
-             {/* SETTINGS MENU */}
+             {/* --- DROPDOWN SETTINGS MENU --- */}
              {showMenu && (
                <div className="settings-menu" style={{ width: '220px' }}>
+                 
+                 {/* ZOOM CONTROLS */}
                  <div style={{ padding: '8px 10px', borderBottom: '1px solid var(--header-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span style={{ fontSize: '13px', color: '#ffb3c1', fontWeight: 600 }}>ZOOM</span>
                     <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
@@ -109,6 +123,7 @@ const Sidebar = () => {
                     </div>
                  </div>
 
+                 {/* NAVIGATION LINKS */}
                  <div className="menu-item" onClick={handleNewChat}>
                    <span>New Chat</span>
                  </div>
@@ -119,7 +134,7 @@ const Sidebar = () => {
                    <span>Memory</span>
                  </div>
                  
-                 {/* MAINTENANCE */}
+                 {/* MAINTENANCE CONTROLS */}
                  <div style={{ padding: '8px 10px', borderTop: '1px solid var(--header-border)', marginTop: '5px' }}>
                     <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#94a3b8', marginBottom: '4px' }}>MAINTENANCE</div>
                     <button 
@@ -135,7 +150,7 @@ const Sidebar = () => {
                     </button>
                  </div>
 
-                 {/* TEACH LUNA */}
+                 {/* KNOWLEDGE INGESTION */}
                  <div style={{ padding: '8px 10px', borderTop: '1px solid var(--header-border)' }}>
                     <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#94a3b8', marginBottom: '4px' }}>TEACH LUNA</div>
                     <div style={{ display: 'flex', gap: '5px' }}>
@@ -155,10 +170,10 @@ const Sidebar = () => {
           <button onClick={() => setView('chat')} className="header-btn">Back</button>
         )}
         
-        {/* TITLE */}
+        {/* --- BRANDING --- */}
         <span>LUNA</span>
 
-        {/* THEME TOGGLE */}
+        {/* --- THEME TOGGLE --- */}
         <button 
           onClick={toggleTheme}
           title="Toggle Theme"
@@ -173,13 +188,16 @@ const Sidebar = () => {
         </button>
       </div>
       
-      {/* CONTENT */}
+      {/* ==========================================
+          DYNAMIC VIEW ROUTING 
+          ========================================== */}
       {view === 'history' ? (
         <ConversationHistory onSelectSession={handleSelectSession} onNewChat={handleNewChat} />
       ) : view === 'memory' ? (
         <MemoryViewer /> 
       ) : (
         <ChatInterface 
+          key={chatKey}
           sessionId={currentSessionId} 
           onSessionCreated={handleSessionCreated} 
           currentMode={mode} 

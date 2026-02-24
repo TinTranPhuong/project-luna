@@ -2,7 +2,7 @@ import gc
 from typing import List, Dict, Any, Optional
 from .llama_cpp_adapter import LlamaCppAdapter
 from server.src.core.prompts.manager import PromptManager
-from server.src.config.settings import get_model_path
+from server.src.config.settings import get_model_path, MAX_CONTEXT_TOKENS
 from server.src.agents.types import AgentConfig
 import asyncio
 
@@ -12,7 +12,7 @@ class LLMManager:
         self.current_model_key = "default"
         self.model_path = get_model_path(self.current_model_key)
         # Create the adapter once — it holds a reference to the global CUDA thread
-        self.provider = LlamaCppAdapter(model_path=self.model_path, n_ctx=8192)
+        self.provider = LlamaCppAdapter(model_path=self.model_path, n_ctx=MAX_CONTEXT_TOKENS)
         self.prompt_manager = PromptManager()
 
     async def initialize(self):
@@ -24,7 +24,7 @@ class LLMManager:
             # This should rarely happen now, but keep as a safety net
             print(f"Manager: Recreating adapter for '{self.current_model_key}'...")
             new_path = get_model_path(self.current_model_key or "default")
-            self.provider = LlamaCppAdapter(model_path=new_path, n_ctx=8192)
+            self.provider = LlamaCppAdapter(model_path=new_path, n_ctx=MAX_CONTEXT_TOKENS)
 
         print(f"Manager: Initializing model '{self.current_model_key}'...")
         await self.provider.initialize()
@@ -54,7 +54,7 @@ class LLMManager:
             print(f"Manager: Provider missing, recreating for '{model_key}'...")
             self.current_model_key = model_key
             new_path = get_model_path(model_key)
-            self.provider = LlamaCppAdapter(model_path=new_path, n_ctx=8192)
+            self.provider = LlamaCppAdapter(model_path=new_path, n_ctx=MAX_CONTEXT_TOKENS)
             await self.provider.initialize()
             return
 
@@ -85,6 +85,10 @@ class LLMManager:
             settings = {}
         if self.provider is None:
             await self.initialize()
+        # Bypass formatter for gpt-oss
+        if self.current_model_key == "gpt-oss":
+            return await self.provider.generate(messages, settings)    
+             
         formatted_messages = self.prompt_manager.build_messages(messages)
         return await self.provider.generate(formatted_messages, settings)
 
@@ -106,6 +110,10 @@ class LLMManager:
         # 2. Apply agent settings
         if agent_config:
             settings["temperature"] = agent_config.temperature
+            if hasattr(agent_config, "top_k"): settings["top_k"] = agent_config.top_k
+            if hasattr(agent_config, "top_p"): settings["top_p"] = agent_config.top_p
+            if hasattr(agent_config, "min_p"): settings["min_p"] = agent_config.min_p
+            if hasattr(agent_config, "repeat_penalty"): settings["repeat_penalty"] = agent_config.repeat_penalty
 
         # 3. Inject system prompt
         if agent_config and agent_config.system_prompt:
@@ -117,8 +125,8 @@ class LLMManager:
         # 4. Stream
         last_msg = messages[-1]["content"] if messages else ""
 
-        if isinstance(last_msg, list):
-            print("Vision Request: Bypassing Prompt Formatter")
+        if isinstance(last_msg, list) or target_model == "gpt-oss":
+            print(f"Bypassing Prompt Formatter for {target_model}")
             async for chunk in self.provider.stream(messages, settings):
                 yield chunk
         else:

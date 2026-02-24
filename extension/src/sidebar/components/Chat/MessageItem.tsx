@@ -21,12 +21,12 @@ interface Props {
 export const MessageItem = ({ message, onExecuteGen }: Props) => {
   const isUser = message.role === 'user';
 
-  // --- HANDLER: Open Ghost Tab ---
+  /* --- EXTENSION MESSAGING --- */
   const handleGhostSearch = (query: string) => {
     chrome.runtime.sendMessage({ action: "OPEN_GHOST_TAB", query: query });
   };
 
-  // --- HELPER: User Context ---
+  /* --- USER MESSAGE RENDERER --- */
   const renderUserMessage = (content: string) => {
     if (content.includes("Context:") && content.includes("</details>")) {
       const splitIndex = content.indexOf("</details>");
@@ -60,51 +60,66 @@ export const MessageItem = ({ message, onExecuteGen }: Props) => {
     return content;
   };
 
-  // --- HELPER: Assistant Message (with Ghost & Image Detection) ---
+  /* --- AI RESPONSE PARSER & RENDERER --- */
   const renderAssistantMessage = (content: string) => {
-    
-    // 1. Detect <cmd_browser> TAG
-    const browserMatch = /<cmd_browser>(.*?)<\/cmd_browser>/.exec(content);
-    let searchRequest: string | null = null;
     let finalAnswer = content;
+
+    /* --- 1. HARMONY FORMAT & MATH NORMALIZATION --- */
+    finalAnswer = finalAnswer.replace(/(?:<\|start\|>assistant)?<\|channel\|>analysis.*?<\|message\|>/g, "<think>\n");
+    finalAnswer = finalAnswer.replace(/(?:<\|start\|>assistant)?<\|channel\|>(?!analysis).*?<\|message\|>/g, "\n</think>\n");
+    finalAnswer = finalAnswer.replace(/<\|im_start\|>assistant/g, "\n</think>\n");
+    finalAnswer = finalAnswer.replace(/<\|end\|>/g, ""); 
+    finalAnswer = finalAnswer.replace(/\\\[([\s\S]*?)\\\]/g, '$$$$$1$$$$');
+    finalAnswer = finalAnswer.replace(/\\\(([\s\S]*?)\\\)/g, '$$$1$$');
+
+    /* --- 2. TOOL EXTRACTION: BROWSER --- */
+    const browserMatch = /<cmd_browser>(.*?)<\/cmd_browser>/.exec(finalAnswer);
+    let searchRequest: string | null = null;
 
     if (browserMatch) {
       searchRequest = browserMatch[1].trim();
       finalAnswer = finalAnswer.replace(browserMatch[0], "").trim(); 
     }
 
-    // 2. Detect <cmd_image_approve> TAG
+    /* --- 3. TOOL EXTRACTION: IMAGE APPROVAL --- */
     const approveMatch = /<cmd_image_approve>([\s\S]*?)<\/cmd_image_approve>/.exec(finalAnswer);
     let promptToApprove: string | null = null;
 
     if (approveMatch) {
         promptToApprove = approveMatch[1].trim();
-        // Using global replace (/g) to destroy ALL accidental duplicate tags
         finalAnswer = finalAnswer.replace(/<cmd_image_approve>([\s\S]*?)<\/cmd_image_approve>/g, "").trim();
     }
 
-    // 3. Detect <cmd_image_track> TAG
+    /* --- 4. TOOL EXTRACTION: IMAGE TRACKING --- */
     const trackMatch = /<cmd_image_track>(.*?)<\/cmd_image_track>/.exec(finalAnswer);
     let trackId: string | null = null;
 
     if (trackMatch) {
       trackId = trackMatch[1].trim();
-      // Using global replace (/g)
       finalAnswer = finalAnswer.replace(/<cmd_image_track>(.*?)<\/cmd_image_track>/g, "").trim();
     }
 
-    // 4. Extract <think> block
-    const thinkMatch = /<think>([\s\S]*?)<\/think>/.exec(finalAnswer);
+    /* --- 5. CHAIN-OF-THOUGHT EXTRACTION --- */
+    const thinkStart = finalAnswer.indexOf("<think>");
     let thoughtContent: string | null = null;
 
-    if (thinkMatch) {
-      thoughtContent = thinkMatch[1].trim();
-      finalAnswer = finalAnswer.replace(thinkMatch[0], "").trim();
+    if (thinkStart !== -1) {
+        const thinkEnd = finalAnswer.indexOf("</think>", thinkStart);
+        if (thinkEnd !== -1) {
+            thoughtContent = finalAnswer.substring(thinkStart + 7, thinkEnd).trim();
+            finalAnswer = finalAnswer.substring(0, thinkStart) + finalAnswer.substring(thinkEnd + 8);
+        } else {
+            thoughtContent = finalAnswer.substring(thinkStart + 7).trim();
+            finalAnswer = finalAnswer.substring(0, thinkStart);
+        }
     }
+
+    finalAnswer = finalAnswer.trim();
 
     return (
       <div>
-        {/* Thought Block */}
+        
+        {/* --- CHAIN OF THOUGHT UI --- */}
         {thoughtContent && (
           <details style={{ marginBottom: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
             <summary style={{ cursor: 'pointer', fontSize: '12px', opacity: 0.7, fontStyle: 'italic', userSelect: 'none' }}>
@@ -119,7 +134,7 @@ export const MessageItem = ({ message, onExecuteGen }: Props) => {
           </details>
         )}
 
-        {/* GHOST BROWSER CARD */}
+        {/* --- GHOST BROWSER CARD --- */}
         {searchRequest && (
           <div style={{ 
             marginBottom: '15px', padding: '12px', 
@@ -147,7 +162,7 @@ export const MessageItem = ({ message, onExecuteGen }: Props) => {
           </div>
         )}
 
-        {/* APPROVAL CARD */}
+        {/* --- IMAGE PROMPT CARD --- */}
         {promptToApprove && (
           <div style={{ 
             marginBottom: '15px', padding: '12px', 
@@ -176,7 +191,7 @@ export const MessageItem = ({ message, onExecuteGen }: Props) => {
           </div>
         )}
 
-        {/* LIVE TRACKER CARD */}
+        {/* --- IMAGE GENERATION TRACKER --- */}
         {trackId && (
           <div style={{ 
             marginBottom: '15px', padding: '12px', 
@@ -185,7 +200,7 @@ export const MessageItem = ({ message, onExecuteGen }: Props) => {
             display: 'flex', flexDirection: 'column', gap: '8px'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#48cae4', fontWeight: 600 }}>
-              <svg xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{animation: 'spin 2s linear infinite'}}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{animation: 'spin 2s linear infinite'}}>
                 <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
               </svg>
               <span>Luna is processing your image</span>
@@ -206,12 +221,11 @@ export const MessageItem = ({ message, onExecuteGen }: Props) => {
           </div>
         )}
 
-        {/* Main Answer */}
+        {/* --- FINAL MARKDOWN RENDERER --- */}
         <ReactMarkdown 
           remarkPlugins={[remarkGfm, remarkMath]} 
           rehypePlugins={[rehypeKatex]} 
           components={{
-            // FORCE LINKS TO OPEN IN NEW TAB
             a: ({node, ...props}) => (
               <a 
                 target="_blank" 

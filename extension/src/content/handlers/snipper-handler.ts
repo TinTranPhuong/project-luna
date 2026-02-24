@@ -1,5 +1,3 @@
-// src/content/handlers/snipper-handler.ts
-
 export class SnipperHandler {
   private startX = 0;
   private startY = 0;

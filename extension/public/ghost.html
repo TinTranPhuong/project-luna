@@ -3,6 +3,7 @@
 <head>
     <title>Luna Search Protocol</title>
     <style>
+        /* --- THEME & COLOR PALETTE --- */
         :root {
             --bg-color: #0f172a;
             --term-bg: rgba(15, 23, 42, 0.95);
@@ -12,6 +13,7 @@
             --text-highlight: #ff8fab; 
         }
 
+        /* --- GLOBAL LAYOUT --- */
         body {
             background-color: var(--bg-color);
             margin: 0;
@@ -28,8 +30,9 @@
             background-size: 40px 40px;
         }
 
+        /* --- TERMINAL WINDOW COMPONENTS --- */
         .window {
-            width: 700px; /* Made slightly wider to fit new image size */
+            width: 700px;
             background: var(--term-bg);
             border: 1px solid var(--border);
             border-radius: 12px;
@@ -55,7 +58,11 @@
             margin-right: 15px;
         }
 
-        .dot { width: 10px; height: 10px; border-radius: 50%; }
+        .dot { 
+            width: 10px; 
+            height: 10px; 
+            border-radius: 50%; 
+        }
         .red { background: #ef4444; }
         .yellow { background: #eab308; }
         .green { background: #22c55e; }
@@ -68,12 +75,13 @@
             text-transform: uppercase;
         }
 
+        /* --- MAIN CONTENT AREA --- */
         .content-area {
             display: flex;
             align-items: center;
             padding: 30px;
             gap: 25px;
-            min-height: 180px; /* Taller to fit image */
+            min-height: 180px;
         }
 
         .avatar-container {
@@ -122,7 +130,10 @@
             transition: width 0.1s linear;
         }
 
-        @keyframes blink { 50% { opacity: 0; } }
+        /* --- KEYFRAMES --- */
+        @keyframes blink { 
+            50% { opacity: 0; } 
+        }
         @keyframes popIn {
             from { transform: scale(0.9); opacity: 0; }
             to { transform: scale(1); opacity: 1; }

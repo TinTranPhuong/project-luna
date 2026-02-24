@@ -10,14 +10,15 @@ interface Props {
 export const MessageList = ({ messages, loading, onExecuteGen }: Props) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to the bottom when new messages arrive
+  /* --- AUTO-SCROLL LOGIC --- */
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
 
   return (
     <div className="chat-content">
-      {/* Empty State / Welcome Message */}
+      
+      {/* EMPTY STATE */}
       {messages.length === 0 && !loading && (
         <div style={{ textAlign: 'center', marginTop: '40px', color: '#888' }}>
           <h3> Luna is here!   (づ￣ ³￣)づ </h3>
@@ -25,16 +26,16 @@ export const MessageList = ({ messages, loading, onExecuteGen }: Props) => {
         </div>
       )}
 
-      {/* Render list of messages */}
+      {/* MESSAGE HISTORY */}
       {messages.map((msg) => (
         <MessageItem 
-        key={msg.id} 
-        message={msg} 
-        onExecuteGen={onExecuteGen}
+          key={msg.id} 
+          message={msg} 
+          onExecuteGen={onExecuteGen}
         />
       ))}
 
-      {/* Typing Indicator */}
+      {/* LOADING INDICATOR */}
       {loading && (
         <div style={{ 
           alignSelf: 'flex-start', 
@@ -49,7 +50,7 @@ export const MessageList = ({ messages, loading, onExecuteGen }: Props) => {
         </div>
       )}
       
-      {/* Invisible anchor for scrolling */}
+      {/* SCROLL ANCHOR */}
       <div ref={messagesEndRef} />
     </div>
   );
