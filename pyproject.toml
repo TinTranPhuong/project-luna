@@ -1,8 +1,8 @@
 [tool.poetry]
-name = "ai-browser-server"
-version = "1.2"
+name = "ai-assistant-server"
+version = "1.4"
 description = "Local AI Server"
-authors = ["You <you@example.com>"]
+authors = ["TT <Tin.TranPhuong@outlook.com>"]
 package-mode = false
 
 [tool.poetry.dependencies]
