@@ -3,8 +3,15 @@ from datetime import datetime
 from server.src.core.rag.store import store
 from server.src.core.rag.embedder import embedder
 
+# ==============================================================================
+# DOCUMENT PROCESSING & INGESTION
+# ==============================================================================
+
 def recursive_split(text: str, chunk_size=500, overlap=50):
-    # Splits text into smaller chunks with overlap
+    """
+    Splits a large text block into smaller, overlapping chunks 
+    to preserve contextual boundaries during vector search.
+    """
     chunks = []
     start = 0
     while start < len(text):
@@ -14,12 +21,18 @@ def recursive_split(text: str, chunk_size=500, overlap=50):
     return chunks
 
 def generate_id(url: str, index: int) -> str:
-    # Generates a consistent ID based on URL and chunk index
+    """
+    Generates a deterministic, repeatable ID based on the source URL and chunk index.
+    Prevents duplicate entries if the same page is ingested multiple times.
+    """
     url_hash = hashlib.md5(url.encode()).hexdigest()
     return f"{url_hash}_{index}"
 
 def process_and_save(text: str, url: str):
-    # Main entry point: Cleans, splits, embeds, and saves text
+    """
+    Main ingestion pipeline: chunks raw text, generates CPU embeddings, 
+    and commits the data to the Working Memory database tier.
+    """
     print(f"Processing: {url}...")
     
     chunks = recursive_split(text)
@@ -37,10 +50,8 @@ def process_and_save(text: str, url: str):
             "usage_count": 0
         })
     
-    # Generate Embeddings on CPU
+    # --- GENERATE EMBEDDINGS & STORE ---
     embeddings = embedder.embed_documents(chunks)
-    
-    # Save to Database
     store.save_to_working(chunks, metadatas, ids)
     
     return len(chunks)

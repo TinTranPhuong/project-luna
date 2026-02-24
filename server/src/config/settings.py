@@ -63,3 +63,9 @@ def get_model_path(model_key: str = "default") -> str:
 # --- CONTEXT VARS ---
 MAX_HISTORY_MESSAGES = 8
 MAX_CONTEXT_TOKENS = 30000
+
+# ==============================================================================
+# EXTERNAL SERVICES & ENGINE LIMITS
+# ==============================================================================
+COMFY_SERVER = "127.0.0.1:8188"
+MAX_NEW_TOKENS = 4096

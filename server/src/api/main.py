@@ -6,25 +6,29 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from pathlib import Path
 
-# --- 1. BULLETPROOF PATH & IMPORTS ---
+# ==============================================================================
+# PATH RESOLUTION & SYSTEM ENVIRONMENT
+# ==============================================================================
 current_file = Path(__file__).resolve() 
-# Path: D:\Project_Luna\server\src\api\main.py -> D:\Project_Luna\server\
-# We need to reach the server root for the 'server.src' imports to work
 PROJECT_ROOT = current_file.parent.parent.parent.parent 
+
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.append(str(PROJECT_ROOT))
 
-# Now construct the correct workflow path (up two levels to 'src')
 SRC_DIR = current_file.parent.parent 
 WORKFLOW_PATH = SRC_DIR / "tools" / "comfyui" / "workflow_api.json"
 
-# --- 2. IMPORTS ---
+# ==============================================================================
+# INTERNAL IMPORTS
+# ==============================================================================
 from server.src.api.routers import chat, memory
 from server.src.core.rag.store import store
 from server.src.core.llm.comfy_adapter import ComfyAdapter
 from server.src.api.routers.chat import llm_manager
 
-# --- 3. INITIALIZE ADAPTER ---
+# ==============================================================================
+# ADAPTER INITIALIZATION
+# ==============================================================================
 if not WORKFLOW_PATH.exists():
     print(f"ERROR: Still cannot find workflow at: {WORKFLOW_PATH}")
 else:
@@ -32,8 +36,12 @@ else:
 
 comfy_adapter = ComfyAdapter(str(WORKFLOW_PATH))
 
+# ==============================================================================
+# APPLICATION LIFECYCLE
+# ==============================================================================
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    """Handles startup and shutdown events for the FastAPI application."""
     print("Luna Server Starting...")
     store.cleanup()
     yield
@@ -41,6 +49,9 @@ async def lifespan(app: FastAPI):
     
 app = FastAPI(title="Luna Server", version="1.3", lifespan=lifespan)
 
+# ==============================================================================
+# MIDDLEWARE & ROUTING
+# ==============================================================================
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -53,11 +64,18 @@ app.add_middleware(
 app.include_router(chat.router, prefix="/api/v1/chat", tags=["chat"])
 app.include_router(memory.router, prefix="/api/v1/memory", tags=["Memory"])
 
+# ==============================================================================
+# ROOT ENDPOINTS
+# ==============================================================================
 class GenerateRequest(BaseModel):
     prompt: str
 
 @app.post("/api/v1/image/generate", tags=["Image"])
 async def generate_image(request: GenerateRequest):
+    """
+    Intercepts image generation requests. Unloads the LLM from VRAM 
+    and hands the prompt over to the ComfyUI adapter.
+    """
     print(f"Received Image Request: {request.prompt}")
     print("Handoff: Unloading LLM to clear VRAM for ComfyUI...")
     llm_manager.unload_model()

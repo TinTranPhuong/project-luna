@@ -4,7 +4,16 @@ from datetime import datetime, timedelta
 from server.src.config.settings import CHROMA_PATH, PROMOTION_THRESHOLD, TEMP_RETENTION_DAYS 
 import time
 
+# ==============================================================================
+# MULTI-TIER VECTOR DATABASE
+# ==============================================================================
+
 class MemoryStore:
+    """
+    Singleton connection manager for ChromaDB. 
+    Implements a split-brain architecture separating short-term data (Working Memory)
+    from highly accessed, permanent knowledge (Core Memory).
+    """
     _instance = None
 
     def __new__(cls):
@@ -35,16 +44,12 @@ class MemoryStore:
 
     def cleanup(self):
         """
-        The Janitor: Deletes 'temp' memories older than TEMP_RETENTION_DAYS (5 days).
-        Runs on server startup.
+        Scheduled janitor protocol.
+        Scans Working Memory and deletes any chunks that have exceeded the TEMP_RETENTION_DAYS limit.
         """
         print("Running Cleanup Task...")
         
-        # 1. Get all temp items
-        # We fetch only metadata/ids to save RAM
-        data = self.working_memory.get(
-            where={"tier": "temp"} # ChromaDB filter
-        )
+        data = self.working_memory.get(where={"tier": "temp"})
         
         if not data or not data['ids']:
             print("No temp memories to clean.")
@@ -55,27 +60,27 @@ class MemoryStore:
         
         count = 0
         for i, meta in enumerate(data['metadatas']):
-            # Robust Date Parsing
             try:
                 created_at_str = meta.get('created_at')
                 if not created_at_str: continue
                 
-                # Parse the date string back to object
                 created_at = datetime.fromisoformat(created_at_str)
                 
-                # Check if it's too old
                 if created_at < limit_date:
                     ids_to_delete.append(data['ids'][i])
                     count += 1
             except Exception as e:
                 print(f"Date parsing error for ID {data['ids'][i]}: {e}")
 
-        # 2. Delete the old ones
         if ids_to_delete:
             print(f"Deleting {count} expired memories...")
             self.working_memory.delete(ids=ids_to_delete)
         else:
             print("All temp memories are fresh.")
+
+    # ==========================================================================
+    # DATA MUTATION & PROMOTION
+    # ==========================================================================
 
     def save_to_working(self, chunks: list, metadatas: list, ids: list):
         if not ids: return
@@ -93,6 +98,7 @@ class MemoryStore:
         print(f"Saved {len(ids)} chunks to Working Memory.")
 
     def promote_to_core(self, chunk_id: str, document: str, metadata: dict):
+        """Migrates a highly accessed chunk from short-term to permanent storage."""
         print(f"PROMOTION! Memory {chunk_id} has graduated to Core.")
         
         metadata["tier"] = "core"
@@ -104,6 +110,10 @@ class MemoryStore:
         self.working_memory.delete(ids=[chunk_id])
 
     def update_usage(self, result_ids: list, result_metadatas: list, documents: list):
+        """
+        Increments the usage telemetry for retrieved chunks.
+        Triggers promotion protocol if the threshold is met.
+        """
         for i, _id in enumerate(result_ids):
             meta = result_metadatas[i]
             if meta.get("tier") != "temp": continue
@@ -119,6 +129,7 @@ class MemoryStore:
                 self.working_memory.update(ids=[_id], metadatas=[meta])
 
     def query_all(self, query_vector, n_results=10):
+        """Executes a parallel dense vector search across both memory tiers."""
         core_results = self.core_memory.query(query_embeddings=[query_vector], n_results=n_results)
         work_results = self.working_memory.query(query_embeddings=[query_vector], n_results=n_results)
         return {"core": core_results, "working": work_results}

@@ -10,7 +10,7 @@ import os
 import re 
 from pathlib import Path
 
-# Imports
+# --- INTERNAL IMPORTS ---
 from server.src.data.database.sqlite import get_db
 from server.src.data.database.models import ChatSession, ChatMessage
 from server.src.core.llm.manager import LLMManager
@@ -21,15 +21,18 @@ from server.src.core.llm.comfy_adapter import ComfyAdapter
 router = APIRouter()
 llm_manager = LLMManager()
 
-# --- BULLETPROOF PATH SETUP ---
+# ==============================================================================
+# PATH RESOLUTION & ADAPTER INITIALIZATION
+# ==============================================================================
 CURRENT_FILE = Path(__file__).resolve()
 SRC_DIR = CURRENT_FILE.parent.parent.parent
 WORKFLOW_PATH = SRC_DIR / "tools" / "comfyui" / "workflow_api.json"
 
-# Initialize Adapter
 comfy_adapter = ComfyAdapter(str(WORKFLOW_PATH))
 
-# --- Schemas ---
+# ==============================================================================
+# SCHEMAS
+# ==============================================================================
 class ChatRequest(BaseModel):
     message: str
     session_id: Optional[int] = None
@@ -53,15 +56,19 @@ class MessageSchema(BaseModel):
     content: str
     class Config: from_attributes = True
 
-# --- Endpoints ---
+# ==============================================================================
+# SESSION MANAGEMENT ENDPOINTS
+# ==============================================================================
 
 @router.get("/sessions", response_model=List[SessionSchema])
 async def get_sessions(limit: int = 20, db: AsyncSession = Depends(get_db)):
+    """Retrieves a paginated list of recent chat sessions."""
     result = await db.execute(select(ChatSession).order_by(desc(ChatSession.created_at)).limit(limit))
     return result.scalars().all()
 
 @router.get("/history/{session_id}", response_model=List[MessageSchema])
 async def get_session_history(session_id: int, db: AsyncSession = Depends(get_db)):
+    """Retrieves the full message history for a specific session ID."""
     result = await db.execute(select(ChatSession).where(ChatSession.id == session_id))
     if not result.scalar_one_or_none():
         raise HTTPException(status_code=404, detail="Session not found")
@@ -72,6 +79,7 @@ async def get_session_history(session_id: int, db: AsyncSession = Depends(get_db
 
 @router.delete("/sessions/{session_id}")
 async def delete_session(session_id: int, db: AsyncSession = Depends(get_db)):
+    """Deletes a specific session and all associated messages."""
     await db.execute(delete(ChatMessage).where(ChatMessage.session_id == session_id))
     await db.execute(delete(ChatSession).where(ChatSession.id == session_id))
     await db.commit()
@@ -79,14 +87,23 @@ async def delete_session(session_id: int, db: AsyncSession = Depends(get_db)):
 
 @router.delete("/sessions")
 async def clear_all_sessions(db: AsyncSession = Depends(get_db)):
+    """Wipes all sessions and messages from the database."""
     await db.execute(delete(ChatMessage))
     await db.execute(delete(ChatSession))
     await db.commit()
     return {"status": "success"}
 
+# ==============================================================================
+# CORE CHAT GENERATION ENDPOINT
+# ==============================================================================
+
 @router.post("")
 async def chat_endpoint(request: ChatRequest, db: AsyncSession = Depends(get_db)):
-    # 1. Manage Session
+    """
+    Main entry point for AI communication. Handles session tracking, context injection, 
+    RAG retrieval, and streams the generator's response back to the client.
+    """
+    # --- 1. SESSION RESOLUTION ---
     session = None
     if request.session_id:
         result = await db.execute(select(ChatSession).where(ChatSession.id == request.session_id))
@@ -99,22 +116,21 @@ async def chat_endpoint(request: ChatRequest, db: AsyncSession = Depends(get_db)
         await db.commit()
         await db.refresh(session)
 
-    # 2. Save User Message
+    # --- 2. RECORD USER MESSAGE ---
     user_msg = ChatMessage(session_id=session.id, role="user", content=request.message)
     db.add(user_msg)
     await db.commit()
 
-    # 3. Load History
+    # --- 3. CONTEXT SANITIZATION ---
     history_result = await db.execute(
         select(ChatMessage).where(ChatMessage.session_id == session.id).order_by(ChatMessage.created_at)
     )
     
-    # HISTORY SCRUBBER
-    # We strip all hidden tags from the history so the LLM never sees them or tries to mimic them!
     chat_history = []
     for msg in history_result.scalars().all():
         clean_content = msg.content
         if isinstance(clean_content, str):
+            # Strip system tags to prevent the LLM from attempting to mimic or parse them
             clean_content = re.sub(r'<cmd_image_approve>.*?</cmd_image_approve>', '', clean_content, flags=re.DOTALL)
             clean_content = re.sub(r'<cmd_image_track>.*?</cmd_image_track>', '', clean_content, flags=re.DOTALL)
             clean_content = re.sub(r'(?:<\|start\|>assistant)?<\|channel\|>analysis.*?<\|message\|>.*?(?:<\|start\|>assistant)?<\|channel\|>(?!analysis)[a-zA-Z0-9_]+<\|message\|>', '', clean_content, flags=re.DOTALL)
@@ -123,7 +139,7 @@ async def chat_endpoint(request: ChatRequest, db: AsyncSession = Depends(get_db)
             clean_content = clean_content.strip()
         chat_history.append({"role": msg.role, "content": clean_content})
 
-    # 4. Agent Setup
+    # --- 4. AGENT ROUTING & RAG INJECTION ---
     agent_config = get_agent(request.mode)
     print(f"Routing to Agent: {agent_config.name}")
 
@@ -154,19 +170,17 @@ async def chat_endpoint(request: ChatRequest, db: AsyncSession = Depends(get_db)
         if chat_history and chat_history[-1]["role"] == "user":
             chat_history[-1]["content"] = current_prompt_text
 
-    # 5. Stream Response
+    # --- 5. ASYNCHRONOUS GENERATION LOOP ---
     async def iter_response():
         full_response = ""
         
-        # HANDLE EXECUTION COMMAND 
+        # INTERCEPT: DIRECT TOOL EXECUTION
         if request.message.startswith("/execute_image"):
             refined_prompt = request.message.replace("/execute_image", "").strip()
             
-            # yield "\n\n**Phase 1:** Unloading Brain (Freeing VRAM)...\n"
             llm_manager.unload_model()
             await asyncio.sleep(0.5) 
 
-            # yield "**Phase 2:** Generating Image (Please Wait)...\n"
             comfy_response = comfy_adapter.queue_prompt(refined_prompt)
 
             if "error" in comfy_response:
@@ -186,7 +200,7 @@ async def chat_endpoint(request: ChatRequest, db: AsyncSession = Depends(get_db)
                     print("Forcing ComfyUI to empty VRAM cache...")
                     payload = json.dumps({"unload_models": True, "free_memory": True}).encode("utf-8")
                     req = urllib.request.Request(
-                        "[http://127.0.0.1:8188/free](http://127.0.0.1:8188/free)",
+                        "http://127.0.0.1:8188/free",
                         data=payload,
                         headers={"Content-Type": "application/json"},
                     )
@@ -198,6 +212,7 @@ async def chat_endpoint(request: ChatRequest, db: AsyncSession = Depends(get_db)
                 await llm_manager.initialize()
                 yield "**Ready:** Generation successful."
             
+            # Record execution in history
             async for db_new in get_db():
                 ai_msg = ChatMessage(session_id=session.id, role="assistant", content=f"*(User Approved Generation)*\n\n<cmd_image_track>{prompt_id}</cmd_image_track>")
                 db_new.add(ai_msg)
@@ -205,7 +220,7 @@ async def chat_endpoint(request: ChatRequest, db: AsyncSession = Depends(get_db)
                 break
             return 
 
-        # --- NORMAL LLM GENERATION ---
+        # STANDARD LLM INFERENCE
         try:
             async for chunk in llm_manager.stream_chat(chat_history, agent_config=agent_config):
                 full_response += chunk
@@ -214,22 +229,20 @@ async def chat_endpoint(request: ChatRequest, db: AsyncSession = Depends(get_db)
             yield f"\n[Error: {e}]"
             return
 
-        # INITIAL PROMPT GENERATION
+        # POST-PROCESSING: IMAGE PROMPT EXTRACTION
         if request.mode == "image_gen":
-            
             match = re.search(r'```(?:[a-zA-Z]+\s*)?(.*?)```', full_response, re.DOTALL)
             
             if match:
                 refined_prompt = match.group(1).strip()
             else:
-                # Fallback: Strip any hallucinated tags before wrapping
                 clean_response = re.sub(r'<cmd_.*?>.*?</cmd_.*?>', '', full_response, flags=re.DOTALL).strip()
                 refined_prompt = clean_response 
                 
             yield f"\n\n<cmd_image_approve>{refined_prompt}</cmd_image_approve>"
             full_response += f"\n\n<cmd_image_approve>{refined_prompt}</cmd_image_approve>"
-        # ----------------------------------------
 
+        # PERSIST FINAL RESPONSE
         if full_response:
             async for db_new in get_db():
                 ai_msg = ChatMessage(session_id=session.id, role="assistant", content=full_response)

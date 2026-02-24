@@ -5,17 +5,27 @@ from server.src.config.settings import CACHE_PATH, DEFAULT_K, RERANK_TOP_K
 from server.src.core.rag.store import store
 from server.src.core.rag.embedder import embedder
 
+# ==============================================================================
+# CACHE & RANKER INITIALIZATION
+# ==============================================================================
 cache = Cache(CACHE_PATH)
 ranker = Ranker(model_name="ms-marco-TinyBERT-L-2-v2", cache_dir=CACHE_PATH)
 
+# ==============================================================================
+# RETRIEVAL ENGINE
+# ==============================================================================
+
 class Retriever:
+    """
+    Orchestrates the multi-stage search pipeline: 
+    Cache Check -> Dense Vector Search -> Cross-Encoder Reranking -> Telemetry Update.
+    """
     def __init__(self):
         self.cache = cache
         self.ranker = ranker
 
     def search(self, query: str) -> list:
-        # 1. Check Cache (Speed Layer) - ENABLED 
-        # If we asked this exact question recently, return the saved answer.
+        # --- 1. L1 SPEED LAYER (CACHE) ---
         cache_key = f"search:{query}"
         if cache_key in self.cache:
             print(f"Cache Hit: {query}")
@@ -23,13 +33,11 @@ class Retriever:
 
         print(f"Searching: {query}...")
 
-        # 2. Embed Query
+        # --- 2. DENSE VECTOR RETRIEVAL ---
         query_vector = embedder.embed_query(query)
-
-        # 3. Vector Search
         raw_results = store.query_all(query_vector, n_results=DEFAULT_K)
         
-        # 4. Flatten Results
+        # --- 3. RESULT FLATTENING ---
         candidates = []
         
         if raw_results["core"]["documents"]:
@@ -53,7 +61,7 @@ class Retriever:
         if not candidates:
             return []
 
-        # 5. Rerank
+        # --- 4. CROSS-ENCODER RERANKING ---
         passages = [
             {"id": c["id"], "text": c["text"], "meta": c["meta"]} 
             for c in candidates
@@ -62,10 +70,9 @@ class Retriever:
         rerank_request = RerankRequest(query=query, passages=passages)
         ranked_results = self.ranker.rerank(rerank_request)
 
-        # 6. Select Top K
         final_results = ranked_results[:RERANK_TOP_K]
         
-        # 7. AUTOMATION: Update Usage Stats (Rule of 5)
+        # --- 5. TELEMETRY & CACHE COMMIT ---
         try:
             update_ids = [r["id"] for r in final_results]
             update_metas = [r["meta"] for r in final_results]
@@ -75,7 +82,6 @@ class Retriever:
         except Exception as e:
             print(f"Failed to update stats: {e}")
 
-        # 8. Update Cache - ENABLED 
         self.cache[cache_key] = final_results
         
         return final_results

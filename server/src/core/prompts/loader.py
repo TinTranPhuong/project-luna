@@ -1,14 +1,15 @@
 import os
 
+# ==============================================================================
+# PROMPT LOADER
+# ==============================================================================
+
 def load_agent_prompt(filename: str) -> str:
     """
-    Reads a markdown file from the 'agents' directory 
-    and returns it as a string.
+    Resolves the absolute path to the designated agent markdown file 
+    and loads its contents as the system prompt string.
     """
-    # Get the directory where this script (loader.py) lives
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    
-    # Build path to the agents folder
     file_path = os.path.join(current_dir, "agents", filename)
     
     try:

@@ -1,29 +1,39 @@
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
 
-# 1. The Connection String (Creates 'luna.db' in project root)
+# ==============================================================================
+# DATABASE CONFIGURATION
+# ==============================================================================
 DATABASE_URL = "sqlite+aiosqlite:///./luna.db"
 
-# 2. The Engine (Connection Manager)
 engine = create_async_engine(
     DATABASE_URL,
-    echo=False,  # Set True to debug SQL queries
+    echo=False,  
     future=True
 )
 
-# 3. Session Factory (Creates new DB sessions)
+# ==============================================================================
+# SESSION MANAGEMENT
+# ==============================================================================
 AsyncSessionLocal = async_sessionmaker(
     engine, 
     class_=AsyncSession, 
     expire_on_commit=False
 )
 
-# 4. The ORM Base Class
 class Base(DeclarativeBase):
+    """Base class for all SQLAlchemy ORM models."""
     pass
 
-# 5. Dependency for FastAPI (to be imported in api/deps.py later)
+# ==============================================================================
+# DEPENDENCY INJECTION
+# ==============================================================================
 async def get_db():
+    """
+    Provides an asynchronous database session for FastAPI routes.
+    Ensures the connection is safely closed and returned to the pool 
+    after the request completes.
+    """
     async with AsyncSessionLocal() as session:
         try:
             yield session

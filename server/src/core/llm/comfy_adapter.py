@@ -7,17 +7,30 @@ import os
 import asyncio
 import websockets
 from typing import Dict, Any
+from server.src.config.settings import COMFY_SERVER
 
-COMFY_SERVER = "127.0.0.1:8188"
+# ==============================================================================
+# CONFIGURATION
+# ==============================================================================
 CLIENT_ID = str(uuid.uuid4())
 
+# ==============================================================================
+# COMFYUI INTEGRATION ADAPTER
+# ==============================================================================
+
 class ComfyAdapter:
+    """
+    Adapter for interfacing with a local ComfyUI Stable Diffusion instance.
+    Handles payload formatting, HTTP queuing, and WebSocket telemetry tracking.
+    """
+    
     def __init__(self, workflow_path: str):
         self.server_address = COMFY_SERVER
         self.workflow_path = workflow_path
         self.workflow_data = self._load_workflow()
 
     def _load_workflow(self) -> Dict[str, Any]:
+        """Loads and parses the target ComfyUI JSON workflow into memory."""
         if not os.path.exists(self.workflow_path):
             print(f"Error: Workflow file not found at {self.workflow_path}")
             return {}
@@ -28,21 +41,24 @@ class ComfyAdapter:
             print(f"Error loading workflow: {e}")
             return {}
 
+    # --- INFERENCE EXECUTION ---
+    
     def queue_prompt(self, positive_prompt: str):
+        """
+        Injects the generated prompt and a randomized seed into the workflow payload, 
+        then dispatches it to the ComfyUI API queue.
+        """
         if not self.workflow_data:
             return {"error": "Workflow not loaded"}
 
         workflow = self.workflow_data.copy()
 
-        # Node 4 = Prompt
         if "4" in workflow:
             workflow["4"]["inputs"]["text"] = positive_prompt
 
-        # Node 7 = Seed
         if "7" in workflow:
             workflow["7"]["inputs"]["seed"] = random.randint(1, 1000000000)
 
-        # Send to API
         p = {"prompt": workflow, "client_id": CLIENT_ID}
         data = json.dumps(p).encode('utf-8')
         
@@ -52,9 +68,15 @@ class ComfyAdapter:
         except Exception as e:
             return {"error": f"Failed to connect: {e}"}
 
+    # --- TELEMETRY & LIFECYCLE ---
+
     async def wait_for_completion(self, prompt_id: str):
+        """
+        Establishes a WebSocket connection to monitor the execution pipeline.
+        Yields control back to the event loop until the specific prompt_id finishes processing.
+        """
         ws_url = f"ws://{self.server_address}/ws?clientId={CLIENT_ID}"
-        print(f"Watching Paint Job {prompt_id}...")
+        print(f"Watching execution stream for Job: {prompt_id}...")
         
         try:
             async with websockets.connect(ws_url) as ws:
@@ -69,10 +91,11 @@ class ComfyAdapter:
             print(f"WebSocket Error: {e}")
 
     def free_memory(self):
-        """Forces the OS to reclaim RAM immediately."""
+        """
+        Aggressively forces the host Operating System to reclaim allocated RAM 
+        by trimming the process Working Set. Crucial for low-VRAM environments.
+        """
         import ctypes
-        # This tells Windows to trim the 'Working Set' of the process
-        # It's the most aggressive way to force a RAM release.
         try:
             handle = ctypes.windll.kernel32.GetCurrentProcess()
             ctypes.windll.psapi.EmptyWorkingSet(handle)
