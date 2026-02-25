@@ -8,8 +8,6 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.100%2B-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![React](https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](LICENSE)
-
 
 Luna is a fully **local**, **memory-augmented AI assistant** delivered through a **Chrome Extension**, powered by a custom **FastAPI** backend and **llama.cpp** inference engine. Your data never leaves your machine. Luna learns what you care about, remembers it across sessions, sees what you see in the browser, and can even generate images — all on your own GPU.
 </div>
