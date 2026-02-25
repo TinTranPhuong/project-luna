@@ -102,10 +102,16 @@ Luna is a fully **local**, **memory-augmented AI assistant** delivered through a
 ```
 project-luna/
 │
+├── rag_data/                         # ChromaDB vector storage & cache (auto-generated)
 ├── extension/                        # Chrome Extension (React + TypeScript)
 │   ├── dist/                         # Compiled extension output (load this into Chrome)
 │   ├── node_modules/
 │   ├── public/                       # Static assets, Manifest V3, HTML entry points
+│   │   ├── ghost.html                # Offscreen document for background web searching
+│   │   ├── ghost.js                  # Logic for the autonomous "Ghost Browser" tool
+│   │   ├── luna_image.html           # Isolated UI for image viewing and processing
+│   │   ├── luna_image.js             # Logic for image rendering and generation previews
+│   │   └── manifest.json             # Chrome Extension Manifest V3              
 │   ├── src/
 │   │   ├── assets/                   # Icons, images, static resources
 │   │   ├── background/               # Extension service workers
@@ -149,7 +155,6 @@ project-luna/
 └── server/                           # FastAPI Backend
     ├── alembic/                      # Database migration scripts
     ├── models/                       # Local .gguf LLM weight files (not tracked in git)
-    ├── rag_data/                     # ChromaDB vector storage & cache (auto-generated)
     ├── src/
     │   ├── agents/                   # Persona definitions
     │   │   ├── registry.py           # Agent registry and routing
@@ -189,14 +194,16 @@ project-luna/
     │   │       ├── __init__.py
     │   │       ├── models.py         # SQLAlchemy ORM models
     │   │       └── sqlite.py         # Async DB session management
-    │   └── utils/
-    │       └── scraper.py            # Trafilatura web scraping
-    ├── tools/
-    │   └── comfyui/
-    │       └── workflow_api.json     # ComfyUI workflow definition
+    │   ├── models/                   # Local .gguf LLM weight files
+    │   ├── utils/
+    │   │   └── scraper.py            # Trafilatura web scraping
+    │   └── tools/
+    │       └── comfyui/
+    │           └── workflow_api.json # ComfyUI workflow definition
     ├── luna.db                       # SQLite database (auto-generated)
     ├── pyproject.toml
     ├── poetry.lock
+    ├── README.md
     └── start_luna.bat                # Windows one-click launcher
 ```
 

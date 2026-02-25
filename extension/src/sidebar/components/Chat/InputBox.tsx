@@ -25,7 +25,6 @@ export const InputBox = ({ onSend, onStop, onSnip, onImageUpload, onSelectMode, 
     if (text.trim()) {
       onSend(text);
       setText('');
-      // Reset the textarea height after sending
       if (textareaRef.current) {
         textareaRef.current.style.height = 'auto';
       }
@@ -33,7 +32,6 @@ export const InputBox = ({ onSend, onStop, onSnip, onImageUpload, onSelectMode, 
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    // Send on Enter, but allow Shift+Enter for new lines!
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
@@ -42,9 +40,8 @@ export const InputBox = ({ onSend, onStop, onSnip, onImageUpload, onSelectMode, 
 
   const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setText(e.target.value);
-    // Auto-resize logic: Calculate scroll height and set max height
     e.target.style.height = 'auto'; 
-    e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`; // Caps at 120px tall
+    e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`; 
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
